@@ -54,6 +54,7 @@ static void setupPins() {
 	pinMode(PIN_MODE_2, OUTPUT);
 	pinMode(PIN_MODE_4, OUTPUT);
 	pinMode(PIN_MODE_8, OUTPUT);
+	pinMode(PIN_MODE_16, OUTPUT);
 
 	pinMode(PIN_START, OUTPUT);
 	pinMode(PIN_REMOTE, OUTPUT);
@@ -71,16 +72,16 @@ static uint8_t readDigit(uint8_t pin1, uint8_t pin2, uint8_t pin4, uint8_t pin8)
 	);
 }
 
-static float readNumber() {
+static double readNumber() {
 	const uint8_t sign = 
 		(digitalRead(PIN_SIGN_4) ? 4 : 0)
 		| (digitalRead(PIN_SIGN_2) ? 2 : 0)
 		| (digitalRead(PIN_SIGN_1) ? 1 : 0);
 	if (CODE_SIGN_OVERFLOW == sign) {
-		return 3.4028235E+38;
+		return SCPIMM_OVERFLOW;
 	}
 
-	float res = 
+	double res = 
 		readDigit(PIN_DIGIT1_1, PIN_DIGIT1_2, PIN_DIGIT1_4, PIN_DIGIT1_8)
 		+ 10.0 * readDigit(PIN_DIGIT2_1, PIN_DIGIT2_2, PIN_DIGIT2_4, PIN_DIGIT2_8) 
 		+ 100.0 * readDigit(PIN_DIGIT3_1, PIN_DIGIT3_2, PIN_DIGIT3_4, PIN_DIGIT3_8) 
@@ -136,6 +137,15 @@ int SCPIMM_setMode(const uint8_t mode) {
 			digitalWrite(PIN_MODE_2, HIGH);
 			digitalWrite(PIN_MODE_4, HIGH);
 			digitalWrite(PIN_MODE_8, HIGH);
+			digitalWrite(PIN_MODE_16, LOW);
+			break;			
+
+		case SCPIMM_MODE_DCV_RATIO:
+			digitalWrite(PIN_MODE_1, HIGH);
+			digitalWrite(PIN_MODE_2, HIGH);
+			digitalWrite(PIN_MODE_4, HIGH);
+			digitalWrite(PIN_MODE_8, HIGH);
+			digitalWrite(PIN_MODE_16, HIGH);
 			break;			
 
 		case SCPIMM_MODE_ACV:
@@ -143,6 +153,7 @@ int SCPIMM_setMode(const uint8_t mode) {
 			digitalWrite(PIN_MODE_2, HIGH);
 			digitalWrite(PIN_MODE_4, HIGH);
 			digitalWrite(PIN_MODE_8, LOW);
+			digitalWrite(PIN_MODE_16, LOW);
 			break;			
 
 		case SCPIMM_MODE_RESISTANCE_2W:
@@ -150,6 +161,7 @@ int SCPIMM_setMode(const uint8_t mode) {
 			digitalWrite(PIN_MODE_2, LOW);
 			digitalWrite(PIN_MODE_4, LOW);
 			digitalWrite(PIN_MODE_8, HIGH);
+			digitalWrite(PIN_MODE_16, LOW);
 			break;			
 
 		default:
@@ -224,6 +236,10 @@ void SCPIMM_remote(const bool remote) {
 	digitalWrite(PIN_REMOTE, remote ? LOW : HIGH);
 }
 
+void SCPIMM_beep() {
+	// not supported
+}
+
 /******************************************************************************
   Arduino entry point
 ******************************************************************************/
@@ -232,6 +248,7 @@ void setup() {
 	Serial.begin(BAUD_RATE);
 	setupPins();
 	attachInterrupt(INT_VALUE, valueIsReady, FALLING);
+	SCPIMM_setup();
 }
 
 void loop() {
@@ -240,7 +257,4 @@ void loop() {
 		SCPIMM_parseInBuffer(&p, 1);
 	}
 }
-
-void SCPIMM_parseInBuffer(char const*, unsigned int) {}
-void SCPIMM_acceptValue(double) {}
 

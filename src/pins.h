@@ -84,13 +84,15 @@
 #define PIN_MODE_4	48
 /* RC Jack, 2 pin */
 #define PIN_MODE_8	49
+/* RC Jack, А pin */
+#define PIN_MODE_16	50
 
 /* RC Jack, 8 pin */
-#define PIN_START	50
+#define PIN_START	51
 /* RC Jack, 4 pin */
-#define PIN_REMOTE	51
+#define PIN_REMOTE	52
 /* RC Jack, 7 pin */
-#define PIN_AUTOSTART	52
+#define PIN_AUTOSTART	53
 
 #define CODE_SIGN_NON_POLAR 0
 #define CODE_SIGN_OVERFLOW 2

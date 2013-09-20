@@ -25,7 +25,8 @@ LIBSCPIMM_DIR = /home/andrey/workspace/scpi-multimeter/libscpimm
 LIBSCPIMM_SRC_DIR = $(LIBSCPIMM_DIR)/src
 LIBSCPIMM_INCLUDE_DIR = $(LIBSCPIMM_DIR)/inc
 LIBSCPIMM_OBJ_DIR = scpimm.tmp
-LIBSCPIMM_SRCS = $(addprefix $(LIBSCPIMM_SRC_DIR)/, )
+LIBSCPIMM_SRCS = $(addprefix $(LIBSCPIMM_SRC_DIR)/, scpimm.c ieee488.c measure.c)
+LIBSCPIMM_HEADERS = $(addprefix $(LIBSCPIMM_INCLUDE_DIR)/, scpimm.h)
 LIBSCPIMM_OBJS = $(addprefix $(LIBSCPIMM_OBJ_DIR)/, $(notdir $(LIBSCPIMM_SRCS:.c=.o)))
 
 CFLAGS += -g -Os -Wall -fno-exceptions -ffunction-sections -fdata-sections -mmcu=$(ARDUINO_CHIP) -DF_CPU=16000000L -MMD -DUSB_VID=null -DUSB_PID=null -DARDUINO=$(ARDUINO_DEF)
@@ -40,7 +41,7 @@ v7-28-arduino.o:	src/v7-28-arduino.c src/pins.h
 	avr-g++ -c $(CFLAGS) $(ARDUINO_INCLUDES) -I$(LIBSCPI_INCLUDE_DIR) -I$(LIBSCPIMM_DIR)/inc src/v7-28-arduino.c -o v7-28-arduino.o
 
 v7-28-arduino.elf:	v7-28-arduino.o core.a $(LIBSCPI_OBJ_DIR) $(LIBSCPI_OBJS) $(LIBSCPIMM_OBJ_DIR) $(LIBSCPIMM_OBJS)
-	avr-gcc -Os -Wl,--gc-sections,--relax -mmcu=$(ARDUINO_CHIP) -o v7-28-arduino.elf v7-28-arduino.o $(LIBSCPI_OBJS) core.a -L. -lm
+	avr-gcc -Os -Wl,--gc-sections,--relax -mmcu=$(ARDUINO_CHIP) -o v7-28-arduino.elf v7-28-arduino.o $(LIBSCPI_OBJS) $(LIBSCPIMM_OBJS) core.a -L. -lm
 
 v7-28-arduino.eep:	v7-28-arduino.elf
 	avr-objcopy -O ihex -j .eeprom --set-section-flags=.eeprom=alloc,load --no-change-warnings --change-section-lma .eeprom=0 v7-28-arduino.elf v7-28-arduino.eep

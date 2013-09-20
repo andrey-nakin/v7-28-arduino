@@ -1,0 +1,80 @@
+\documentclass[12pt, a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[russian]{babel}
+\usepackage{hyperref}
+\usepackage[]{graphicx}
+
+\title{Прошивка эмуляции мультиметра Hewlett-Packard 34401A. \\ Список поддерживаемых команд}
+
+\newcommand{\CMD}[1]{{\tt #1}}
+\newcommand{\CMDSTUB}[1]{{\tt #1}*}
+
+\newcommand{\SUBSYSTEMSECTION}[1]{\subsection{Подсистема \CMD{#1}}}
+\newcommand{\CMDSECTION}[1]{\subsubsection*{\CMD{#1}}}
+
+\begin{document}
+
+\maketitle
+
+\section{Введение}
+
+В данном документе приведён список SCPI команд, реализованных в прошивке-эмуляторе мультиметра Hewlett-Packard \mbox{34401A} на базе микроконтроллера Arduino \mbox{Mega2560} и цифрового вольтметра \mbox{В7-28}.
+
+\section{Список команд}
+
+Команды приведены в алфавитном порядке с разбивкой на подсистемы. Команда может сопровождаться комментарием, описывающим особенности реализации.
+
+Команды, отсутствующие в данном списке, не реализованы. При получении нереализованной или неизвестной команды генерируется ошибка \CMD{-113} <<Undefined header>>.
+
+\SUBSYSTEMSECTION{IEEE-488}
+
+\CMDSECTION{*CLS}
+\CMDSECTION{*ESE}
+\CMDSECTION{*ESE?}
+\CMDSECTION{*ESR?}
+\CMDSECTION{*IDN?}
+
+Возвращается строка, имитирующая мультиметр Hewlett-Packard 34401A.
+
+\CMDSECTION{*OPC}
+\CMDSECTION{*OPC?}
+\CMDSECTION{*RST}
+\CMDSECTION{*SRE}
+\CMDSECTION{*SRE?}
+\CMDSECTION{*STB?}
+\CMDSECTION{*TST?}
+
+Из-за отсутствия технической возможности тестирование не производится.
+
+\CMDSECTION{*WAI}
+
+\SUBSYSTEMSECTION{MEASure}
+
+\CMDSECTION{MEASure:VOLTage:DC?}
+\CMDSECTION{MEASure:VOLTage:DC:RATio?}
+\CMDSECTION{MEASure:VOLTage:AC?}
+\CMDSECTION{MEASure:RESistance?}
+
+\SUBSYSTEMSECTION{ROUTe}
+
+\CMDSECTION{ROUTe:TERMinals?}
+
+Всегда возвращает \CMD{FRON}.
+
+\SUBSYSTEMSECTION{SYSTem}
+
+\CMDSECTION{SYSTem:ERRor}
+\CMDSECTION{SYSTem:BEEPer}
+
+Команда принимается, но зуммер не звучит в связи с отсутствием соответствующего устройства на плате микроконтроллера.
+
+\CMDSECTION{SYSTem:BEEPer:STATe?}
+\CMDSECTION{SYSTem:LOCal}
+\CMDSECTION{SYSTem:REMote}
+
+Команда \CMD{SYSTem:REMote} всегда действует аналогично команде \CMD{SYSTem:RWLock}, то есть управление вольтметром с передней панели запрещено в remote-режиме.
+
+\CMDSECTION{SYSTem:RWLock}
+\CMDSECTION{SYSTem:VERSion?}
+
+\end{document}

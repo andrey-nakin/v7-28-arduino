@@ -10,7 +10,7 @@
 static int set_mode(uint8_t mode);
 static void trigger();
 static size_t send(const uint8_t* data, size_t len);
-static void set_remote(bool remote);
+static void set_remote(bool_t remote, bool_t lock);
 
 /******************************************************************************
   Global constants
@@ -252,7 +252,8 @@ static size_t send(const uint8_t* data, const size_t len) {
 	return Serial.write(data, len);
 }
 
-static void set_remote(const bool remote) {
+static void set_remote(bool_t remote, bool_t lock) {
+	(void) lock;
 	digitalWrite(PIN_REMOTE, remote ? LOW : HIGH);
 }
 

@@ -4,6 +4,26 @@
 #include "pins.h"
 
 /******************************************************************************
+  Forward declarations
+******************************************************************************/
+
+static int set_mode(uint8_t mode);
+static void trigger();
+static size_t send(const uint8_t* data, size_t len);
+static void set_remote(bool remote);
+
+/******************************************************************************
+  Global constants
+******************************************************************************/
+
+static scpimm_interface_t scpimm_interface = {
+	set_mode,
+	trigger,
+	send,
+	set_remote
+};
+
+/******************************************************************************
   Internal functions
 ******************************************************************************/
 
@@ -127,10 +147,10 @@ static void setAutoRange() {
 }
 
 /******************************************************************************
- Multimeter implementation methods 
+  Multimeter interface implementation
 ******************************************************************************/
 
-int SCPIMM_setMode(const uint8_t mode) {
+static int set_mode(const uint8_t mode) {
 	switch (mode) {
 		case SCPIMM_MODE_DCV:
 			digitalWrite(PIN_MODE_1, LOW);
@@ -222,22 +242,18 @@ void SCPIMM_setResistanceRange(const float max) {
 	}
 }
 
-void SCPIMM_triggerMeasurement() {
+static void trigger() {
 	digitalWrite(PIN_START, HIGH);
 	delayMicroseconds(20);
 	digitalWrite(PIN_START, LOW);
 }
 
-size_t SCPIMM_send(const uint8_t* data, const size_t len) {
+static size_t send(const uint8_t* data, const size_t len) {
 	return Serial.write(data, len);
 }
 
-void SCPIMM_remote(const bool remote) {
+static void set_remote(const bool remote) {
 	digitalWrite(PIN_REMOTE, remote ? LOW : HIGH);
-}
-
-void SCPIMM_beep() {
-	// not supported
 }
 
 /******************************************************************************
@@ -248,7 +264,7 @@ void setup() {
 	Serial.begin(BAUD_RATE);
 	setupPins();
 	attachInterrupt(INT_VALUE, valueIsReady, FALLING);
-	SCPIMM_setup();
+	SCPIMM_setup(&scpimm_interface);
 }
 
 void loop() {

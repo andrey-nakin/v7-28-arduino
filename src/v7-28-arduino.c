@@ -56,6 +56,10 @@ static void setupPins() {
 	pinMode(PIN_MODE_8, OUTPUT);
 
 	pinMode(PIN_START, OUTPUT);
+	pinMode(PIN_REMOTE, OUTPUT);
+	pinMode(PIN_AUTOSTART, OUTPUT);
+
+	digitalWrite(PIN_AUTOSTART, LOW);
 }
 
 static uint8_t readDigit(uint8_t pin1, uint8_t pin2, uint8_t pin4, uint8_t pin8) {
@@ -207,12 +211,17 @@ void SCPIMM_setResistanceRange(const float max) {
 }
 
 void SCPIMM_triggerMeasurement() {
-	// TODO
 	digitalWrite(PIN_START, HIGH);
+	delayMicroseconds(20);
+	digitalWrite(PIN_START, LOW);
 }
 
 size_t SCPIMM_send(const uint8_t* data, const size_t len) {
 	return Serial.write(data, len);
+}
+
+void SCPIMM_remote(const bool remote) {
+	digitalWrite(PIN_REMOTE, remote ? LOW : HIGH);
 }
 
 /******************************************************************************
@@ -231,4 +240,7 @@ void loop() {
 		SCPIMM_parseInBuffer(&p, 1);
 	}
 }
+
+void SCPIMM_parseInBuffer(char const*, unsigned int) {}
+void SCPIMM_acceptValue(double) {}
 

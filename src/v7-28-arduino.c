@@ -106,7 +106,7 @@ static float readNumber() {
 }
 
 static void valueIsReady() {
-	MM_acceptValue(readNumber());
+	SCPIMM_acceptValue(readNumber());
 }
 
 static void setRange(const uint8_t bits) {
@@ -125,23 +125,23 @@ static void setAutoRange() {
  Multimeter implementation methods 
 ******************************************************************************/
 
-int MM_setMode(const uint8_t mode) {
+int SCPIMM_setMode(const uint8_t mode) {
 	switch (mode) {
-		case MM_MODE_DCV:
+		case SCPIMM_MODE_DCV:
 			digitalWrite(PIN_MODE_1, LOW);
 			digitalWrite(PIN_MODE_2, HIGH);
 			digitalWrite(PIN_MODE_4, HIGH);
 			digitalWrite(PIN_MODE_8, HIGH);
 			break;			
 
-		case MM_MODE_ACV:
+		case SCPIMM_MODE_ACV:
 			digitalWrite(PIN_MODE_1, LOW);
 			digitalWrite(PIN_MODE_2, HIGH);
 			digitalWrite(PIN_MODE_4, HIGH);
 			digitalWrite(PIN_MODE_8, LOW);
 			break;			
 
-		case MM_MODE_RESISTANCE_2W:
+		case SCPIMM_MODE_RESISTANCE_2W:
 			digitalWrite(PIN_MODE_1, HIGH);
 			digitalWrite(PIN_MODE_2, LOW);
 			digitalWrite(PIN_MODE_4, LOW);
@@ -156,7 +156,7 @@ int MM_setMode(const uint8_t mode) {
 	return 0;
 }
 
-void MM_setDCVRange(const float max) {
+void SCPIMM_setDCVRange(const float max) {
 	if (max < 0.0) {
 		setRange(
 			max <= 0.1 ? 0xc0
@@ -170,7 +170,7 @@ void MM_setDCVRange(const float max) {
 	}
 }
 
-void MM_setACVRange(const float max) {
+void SCPIMM_setACVRange(const float max) {
 	if (max < 0.0) {
 		setRange(
 			max <= 1.0 ? 0x00
@@ -183,15 +183,15 @@ void MM_setACVRange(const float max) {
 	}
 }
 
-void MM_setDCCRange(const float max) {
+void SCPIMM_setDCCRange(const float max) {
 	/* Not supported */
 }
 
-void MM_setACCRange(const float max) {
+void SCPIMM_setACCRange(const float max) {
 	/* Not supported */
 }
 
-void MM_setResistanceRange(const float max) {
+void SCPIMM_setResistanceRange(const float max) {
 	if (max < 0.0) {
 		setRange(
 			max <= 0.1 ? 0xc0
@@ -206,12 +206,12 @@ void MM_setResistanceRange(const float max) {
 	}
 }
 
-void MM_triggerMeasurement() {
+void SCPIMM_triggerMeasurement() {
 	// TODO
 	digitalWrite(PIN_START, HIGH);
 }
 
-size_t MM_send(const uint8_t* data, const size_t len) {
+size_t SCPIMM_send(const uint8_t* data, const size_t len) {
 	return Serial.write(data, len);
 }
 
@@ -228,7 +228,7 @@ void setup() {
 void loop() {
 	if (Serial.available() > 0) {
 		const char p = Serial.read();
-		MM_parseInBuffer(&p, 1);
+		SCPIMM_parseInBuffer(&p, 1);
 	}
 }
 

@@ -7,7 +7,7 @@
   Forward declarations
 ******************************************************************************/
 
-static int set_mode(uint8_t mode);
+static int set_mode(uint8_t mode, float range);
 static void trigger();
 static size_t send(const uint8_t* data, size_t len);
 static void set_remote(bool_t remote, bool_t lock);
@@ -150,7 +150,9 @@ static void setAutoRange() {
   Multimeter interface implementation
 ******************************************************************************/
 
-static int set_mode(const uint8_t mode) {
+static int set_mode(const uint8_t mode, float range) {
+	uint8_t minRange, maxRange;
+
 	switch (mode) {
 		case SCPIMM_MODE_DCV:
 			digitalWrite(PIN_MODE_1, LOW);
@@ -158,6 +160,10 @@ static int set_mode(const uint8_t mode) {
 			digitalWrite(PIN_MODE_4, HIGH);
 			digitalWrite(PIN_MODE_8, HIGH);
 			digitalWrite(PIN_MODE_16, LOW);
+
+			minRange = 0x0c;
+			maxRange = 0x0a;			
+
 			break;			
 
 		case SCPIMM_MODE_DCV_RATIO:
@@ -166,6 +172,10 @@ static int set_mode(const uint8_t mode) {
 			digitalWrite(PIN_MODE_4, HIGH);
 			digitalWrite(PIN_MODE_8, HIGH);
 			digitalWrite(PIN_MODE_16, HIGH);
+
+			minRange = 0x0c;
+			maxRange = 0x0a;			
+
 			break;			
 
 		case SCPIMM_MODE_ACV:
@@ -174,6 +184,10 @@ static int set_mode(const uint8_t mode) {
 			digitalWrite(PIN_MODE_4, HIGH);
 			digitalWrite(PIN_MODE_8, LOW);
 			digitalWrite(PIN_MODE_16, LOW);
+
+			minRange = 0x00;
+			maxRange = 0x0a;			
+
 			break;			
 
 		case SCPIMM_MODE_RESISTANCE_2W:
@@ -182,6 +196,10 @@ static int set_mode(const uint8_t mode) {
 			digitalWrite(PIN_MODE_4, LOW);
 			digitalWrite(PIN_MODE_8, HIGH);
 			digitalWrite(PIN_MODE_16, LOW);
+
+			minRange = 0x0c;
+			maxRange = 0x01;
+
 			break;			
 
 		default:
@@ -189,57 +207,24 @@ static int set_mode(const uint8_t mode) {
 			return -1;
 	}
 
-	return 0;
-}
-
-void SCPIMM_setDCVRange(const float max) {
-	if (max < 0.0) {
-		setRange(
-			max <= 0.1 ? 0xc0
-			: max <= 1.0 ? 0x00
-			: max <= 10.0 ? 0x80
-			: max <= 100.0 ? 0x02
-			: 0x0a
-		);
-	} else {
+	if (SCPIMM_RANGE_MIN == range) {
+		setRange(minRange);
+	} else if (SCPIMM_RANGE_MAX == range) {
+		setRange(maxRange);
+	} else if (SCPIMM_RANGE_DEF == range) {
 		setAutoRange();
-	}
-}
-
-void SCPIMM_setACVRange(const float max) {
-	if (max < 0.0) {
-		setRange(
-			max <= 1.0 ? 0x00
-			: max <= 10.0 ? 0x80
-			: max <= 100.0 ? 0x02
-			: 0x0a
-		);
 	} else {
-		setAutoRange();
-	}
-}
-
-void SCPIMM_setDCCRange(const float max) {
-	/* Not supported */
-}
-
-void SCPIMM_setACCRange(const float max) {
-	/* Not supported */
-}
-
-void SCPIMM_setResistanceRange(const float max) {
-	if (max < 0.0) {
 		setRange(
-			max <= 0.1 ? 0xc0
-			: max <= 1.0 ? 0x00
-			: max <= 10.0 ? 0x80
-			: max <= 100.0 ? 0x02
-			: max <= 1000.0 ? 0x0a
+			range <= 0.1 ? 0xc0
+			: range <= 1.0 ? 0x00
+			: range <= 10.0 ? 0x80
+			: range <= 100.0 ? 0x02
+			: range <= 1000.0 ? 0x0a
 			: 0x01
 		);
-	} else {
-		setAutoRange();
 	}
+
+	return 0;
 }
 
 static void trigger() {

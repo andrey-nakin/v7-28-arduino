@@ -7,7 +7,8 @@
   Forward declarations
 ******************************************************************************/
 
-static int set_mode(uint8_t mode, float range, float resolution);
+static uint16_t supported_modes();
+static bool_t set_mode(uint16_t mode, float range, float resolution);
 static void trigger();
 static size_t send(const uint8_t* data, size_t len);
 static void set_remote(bool_t remote, bool_t lock);
@@ -17,6 +18,7 @@ static void set_remote(bool_t remote, bool_t lock);
 ******************************************************************************/
 
 static scpimm_interface_t scpimm_interface = {
+	supported_modes,
 	set_mode,
 	trigger,
 	send,
@@ -150,7 +152,12 @@ static void setAutoRange() {
   Multimeter interface implementation
 ******************************************************************************/
 
-static int set_mode(const uint8_t mode, float range, float resolution) {
+static uint16_t supported_modes() {
+	return SCPIMM_MODE_DCV | SCPIMM_MODE_DCV_RATIO | SCPIMM_MODE_ACV 
+		| SCPIMM_MODE_RESISTANCE_2W;
+}
+
+static bool_t set_mode(const uint16_t mode, float range, float resolution) {
 	uint8_t minRange, maxRange;
 
 	switch (mode) {
@@ -204,7 +211,7 @@ static int set_mode(const uint8_t mode, float range, float resolution) {
 
 		default:
 			// mode is not supported
-			return -1;
+			return FALSE;
 	}
 
 	if (SCPIMM_RANGE_MIN == range) {
@@ -224,7 +231,7 @@ static int set_mode(const uint8_t mode, float range, float resolution) {
 		);
 	}
 
-	return 0;
+	return TRUE;
 }
 
 static void trigger() {

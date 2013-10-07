@@ -10,6 +10,7 @@
 \newcommand{\V}{\mbox{В7-28}}
 
 \newcommand{\CMD}[1]{{\tt #1}}
+\newcommand{\PARAM}[1]{"<{\it #1}>"}
 \newcommand{\CMDSTUB}[1]{{\tt #1}*}
 
 \newcommand{\SUBSYSTEMSECTION}[1]{\subsection{Подсистема \CMD{#1}}}
@@ -75,12 +76,21 @@ Arduino Mega является готовым устройством, что уд
 
 \CMDSECTION{*WAI}
 
+\SUBSYSTEMSECTION{CONFigure}
+
+В командах \CMD{CONFigure:<function>} параметр \PARAM{resolution} не используется, поскольку \V{} не имеет возможности управления точностью измерений.
+
+\CMDSECTION{CONFigure:RESistance}
+\CMDSECTION{CONFigure:VOLTage:AC}
+\CMDSECTION{CONFigure:VOLTage:DC}
+\CMDSECTION{CONFigure:VOLTage:DC:RATio}
+
 \SUBSYSTEMSECTION{MEASure}
 
+\CMDSECTION{MEASure:RESistance?}
+\CMDSECTION{MEASure:VOLTage:AC?}
 \CMDSECTION{MEASure:VOLTage:DC?}
 \CMDSECTION{MEASure:VOLTage:DC:RATio?}
-\CMDSECTION{MEASure:VOLTage:AC?}
-\CMDSECTION{MEASure:RESistance?}
 
 \SUBSYSTEMSECTION{ROUTe}
 

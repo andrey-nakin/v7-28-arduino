@@ -25,6 +25,7 @@ static scpimm_interface_t scpimm_interface = {
 	set_range,
 	get_range,
 	NULL,
+	NULL,
 	trigger,
 	send,
 	set_remote

@@ -11,7 +11,7 @@ static scpimm_mode_t supported_modes();
 static bool_t set_mode(scpimm_mode_t mode);
 static bool_t set_range(scpimm_mode_t mode, const scpi_number_t* range);
 static bool_t get_range(scpimm_mode_t mode, scpi_number_t* range);
-static void trigger();
+static bool_t start_measure();
 static size_t send(const uint8_t* data, size_t len);
 static void set_remote(bool_t remote, bool_t lock);
 
@@ -26,7 +26,7 @@ static scpimm_interface_t scpimm_interface = {
 	get_range,
 	NULL,
 	NULL,
-	trigger,
+	start_measure,
 	send,
 	set_remote
 };
@@ -145,7 +145,7 @@ static void readNumber(scpi_number_t * result) {
 static void valueIsReady() {
 	scpi_number_t num;
 	readNumber(&num);
-	SCPIMM_acceptValue(&num);
+	SCPIMM_read_value(&num);
 }
 
 static void setRange(const uint8_t bits) {
@@ -314,10 +314,11 @@ static bool_t get_range(scpimm_mode_t mode, scpi_number_t* range) {
 	return FALSE;
 }
 
-static void trigger() {
+static bool_t start_measure() {
 	digitalWrite(PIN_START, HIGH);
 	delayMicroseconds(20);
 	digitalWrite(PIN_START, LOW);
+	return TRUE;
 }
 
 static size_t send(const uint8_t* data, const size_t len) {

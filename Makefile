@@ -25,7 +25,7 @@ LIBSCPIMM_DIR = /home/andrey/workspace/scpi-multimeter/libscpimm
 LIBSCPIMM_SRC_DIR = $(LIBSCPIMM_DIR)/src
 LIBSCPIMM_INCLUDE_DIR = $(LIBSCPIMM_DIR)/inc
 LIBSCPIMM_OBJ_DIR = scpimm.tmp
-LIBSCPIMM_SRCS = $(addprefix $(LIBSCPIMM_SRC_DIR)/, scpimm.c configure.c dmm.c ieee488.c input.c measure.c sample.c sense.c system.c route.c trigger.c utils.c)
+LIBSCPIMM_SRCS = $(addprefix $(LIBSCPIMM_SRC_DIR)/, scpimm.c configure.c display.c dmm.c ieee488.c input.c measure.c sample.c sense.c system.c route.c trigger.c utils.c)
 LIBSCPIMM_HEADERS = $(addprefix $(LIBSCPIMM_INCLUDE_DIR)/, scpimm.h)
 LIBSCPIMM_OBJS = $(addprefix $(LIBSCPIMM_OBJ_DIR)/, $(notdir $(LIBSCPIMM_SRCS:.c=.o)))
 

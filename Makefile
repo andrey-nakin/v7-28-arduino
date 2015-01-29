@@ -11,7 +11,7 @@ ARDUINO_INCLUDES = -I$(ARDUINO_DIR)/hardware/arduino/cores/arduino -I$(ARDUINO_D
 ARDUINO_CORE_SRC_DIR = $(ARDUINO_DIR)/hardware/arduino/cores/arduino
 ARDUINO_CHIP = atmega2560
 
-LIBSCPI_DIR = /home/andrey/workspace/scpi-parser/libscpi
+LIBSCPI_DIR = ../scpi-parser/libscpi
 LIBSCPI_SRC_DIR = $(LIBSCPI_DIR)/src
 LIBSCPI_INCLUDE_DIR = $(LIBSCPI_DIR)/inc
 LIBSCPI_OBJ_DIR = scpi.tmp
@@ -21,7 +21,7 @@ LIBSCPI_SRCS = $(addprefix $(LIBSCPI_SRC_DIR)/, \
 	)
 LIBSCPI_OBJS = $(addprefix $(LIBSCPI_OBJ_DIR)/, $(notdir $(LIBSCPI_SRCS:.c=.o)))
 
-LIBSCPIMM_DIR = /home/andrey/workspace/scpi-multimeter/libscpimm
+LIBSCPIMM_DIR = ../scpi-multimeter/libscpimm
 LIBSCPIMM_SRC_DIR = $(LIBSCPIMM_DIR)/src
 LIBSCPIMM_INCLUDE_DIR = $(LIBSCPIMM_DIR)/inc
 LIBSCPIMM_OBJ_DIR = scpimm.tmp

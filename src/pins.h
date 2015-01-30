@@ -2,16 +2,16 @@
 #define	__PINS_H_V7_28_ARDUINO
 
 /* DPD Jack, Я pin */
-#define PIN_DIGIT1_1	26
+#define PIN_DIGIT1_1	53
 /* DPD Jack, Ю pin */
-#define PIN_DIGIT1_2	28
+#define PIN_DIGIT1_2	51
 /* DPD Jack, 27 pin */
-#define PIN_DIGIT1_4	29
+#define PIN_DIGIT1_4	50
 /* DPD Jack, 28 pin */
-#define PIN_DIGIT1_8	27
+#define PIN_DIGIT1_8	52
 
 /* DPD Jack, Э pin */
-#define PIN_DIGIT2_1	30
+#define PIN_DIGIT2_1	49
 /* DPD Jack, 25 pin */
 #define PIN_DIGIT2_2	33
 /* DPD Jack, Ы pin */

@@ -10,11 +10,13 @@
 
 static scpimm_mode_t supported_modes();
 static int16_t set_mode(const scpimm_mode_t mode, const scpi_number_t* range, const scpi_number_t* resolution);
+static int16_t get_mode(scpimm_mode_t* mode, scpi_number_t* range, scpi_number_t* resolution);
 static bool_t set_range(scpimm_mode_t mode, const scpi_number_t* range);
 static bool_t get_range(scpimm_mode_t mode, scpi_number_t* range);
 static bool_t start_measure();
 static size_t send(const uint8_t* data, size_t len);
 static void set_remote(bool_t remote, bool_t lock);
+static const char* get_error_description(int16_t error);
 
 /******************************************************************************
   Global constants
@@ -23,14 +25,30 @@ static void set_remote(bool_t remote, bool_t lock);
 static scpimm_interface_t scpimm_interface = {
 	supported_modes,
 	set_mode,
+	get_mode,
 	set_range,
 	get_range,
 	NULL,
 	NULL,
 	start_measure,
 	send,
-	set_remote
+	set_remote,
+	NULL,
+	NULL,
+	NULL,
+	get_error_description
 };
+
+/******************************************************************************
+  Global variables
+******************************************************************************/
+
+static struct {
+	uint8_t initialized;
+	scpimm_mode_t mode;
+	scpi_number_t range;
+	scpi_number_t resolution;
+} v7_28_state;
 
 /******************************************************************************
   Internal functions
@@ -277,7 +295,7 @@ static int16_t set_mode(const scpimm_mode_t mode, const scpi_number_t* range, co
 
 		default:
 			// mode is not supported
-			return SCPI_ERROR_INTERNAL;
+			return V7_28_ERROR_INVALID_MODE;
 	}
 
     digitalWrite(PIN_DISABLE, LOW);
@@ -299,12 +317,39 @@ static int16_t set_mode(const scpimm_mode_t mode, const scpi_number_t* range, co
 			| (digitalRead(PIN_READ_MODE_2) ? 2 : 0)
 			| (digitalRead(PIN_READ_MODE_1) ? 1 : 0);
 		if (read_mode == expected) {
+			v7_28_state.mode = mode;
+			v7_28_state.initialized |= V7_28_STATE_INITIALIZED_MODE;
 			return SCPI_ERROR_OK;
 		}
 	}
 
 	// multimeter could not set to given mode
-	return SCPI_ERROR_INTERNAL;
+	return V7_28_ERROR_SET_MODE;
+}
+
+static int16_t get_mode(scpimm_mode_t* mode, scpi_number_t* range, scpi_number_t* resolution) {
+	if (mode) {
+		if (!(v7_28_state.initialized & V7_28_STATE_INITIALIZED_MODE)) {
+			return V7_28_ERROR_MODE_NOT_INITIALIZED;
+		}
+		*mode = v7_28_state.mode;
+	}
+
+	if (range) {
+		if (!(v7_28_state.initialized & V7_28_STATE_INITIALIZED_RANGE)) {
+			return V7_28_ERROR_RANGE_NOT_INITIALIZED;
+		}
+		*range = v7_28_state.range;
+	}
+
+	if (resolution) {
+		if (!(v7_28_state.initialized & V7_28_STATE_INITIALIZED_RESOLUTION)) {
+			return V7_28_ERROR_RESOLUTION_NOT_INITIALIZED;
+		}
+		*resolution = v7_28_state.resolution;
+	}
+
+	return SCPI_ERROR_OK;
 }
 
 static bool_t set_range(scpimm_mode_t mode, const scpi_number_t* range) {
@@ -384,6 +429,17 @@ static size_t send(const uint8_t* data, const size_t len) {
 static void set_remote(bool_t remote, bool_t lock) {
 	(void) lock;
 	digitalWrite(PIN_REMOTE, remote ? LOW : HIGH);
+}
+
+static const char* get_error_description(int16_t error) {
+	switch (error) {
+		case V7_28_ERROR_INVALID_MODE:
+			return "Invalid mode";
+		case V7_28_ERROR_SET_MODE:
+			return "Cannot set mode";
+	}
+
+	return NULL;
 }
 
 /******************************************************************************

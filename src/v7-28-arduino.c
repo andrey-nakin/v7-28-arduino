@@ -137,6 +137,11 @@ static void setupPins() {
 	pinMode(PIN_ORDER_4, INPUT);
 	pinMode(PIN_ORDER_SIGN, INPUT);
 
+	pinMode(PIN_READ_MODE_1, INPUT);
+	pinMode(PIN_READ_MODE_2, INPUT);
+	pinMode(PIN_READ_MODE_4, INPUT);
+	pinMode(PIN_READ_MODE_8, INPUT);
+
 	pinMode(PIN_MEAS_START, INPUT);
 	pinMode(PIN_CPU_START, INPUT);
 	pinMode(PIN_MAINTENANCE, INPUT);
@@ -157,8 +162,16 @@ static void setupPins() {
 	pinMode(PIN_AUTOSTART, OUTPUT);
 	pinMode(PIN_DISABLE, OUTPUT);
 
+	pinMode(PIN_RESERVED_5V_1, OUTPUT);
+	pinMode(PIN_RESERVED_5V_2, OUTPUT);
+
     attachInterrupt(5, valueIsReady, RISING);
     
+    digitalWrite(PIN_DISABLE, LOW);
+
+    digitalWrite(PIN_RESERVED_5V_1, HIGH);
+    digitalWrite(PIN_RESERVED_5V_2, HIGH);
+
     digitalWrite(PIN_REMOTE, LOW);
     digitalWrite(PIN_AUTOSTART, LOW);
     digitalWrite(PIN_AUTO_RANGE, HIGH);

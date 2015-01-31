@@ -117,10 +117,5 @@
 /* RC Jack, 9 pin */
 #define PIN_RESERVED_5V_2   1
 
-#define CODE_SIGN_NON_POLAR 0
-#define CODE_SIGN_OVERFLOW 2
-#define CODE_SIGN_POSITIVE 3
-#define CODE_SIGN_NEGATIVE 5
-
 #endif	//	__PINS_H_V7_28_ARDUINO
 

@@ -37,7 +37,7 @@ CFLAGS += -g -Os -Wall -fno-exceptions -ffunction-sections -fdata-sections -mmcu
 
 all:	v7-28-arduino.eep v7-28-arduino.hex
 
-v7-28-arduino.o:	src/v7-28-arduino.c src/pins.h
+v7-28-arduino.o:	src/v7-28-arduino.c src/consts.h src/pins.h
 	avr-g++ -c $(CFLAGS) $(ARDUINO_INCLUDES) -I$(LIBSCPI_INCLUDE_DIR) -I$(LIBSCPIMM_DIR)/inc src/v7-28-arduino.c -o v7-28-arduino.o
 
 v7-28-arduino.elf:	v7-28-arduino.o core.a $(LIBSCPI_OBJ_DIR) $(LIBSCPI_OBJS) $(LIBSCPIMM_OBJ_DIR) $(LIBSCPIMM_OBJS)

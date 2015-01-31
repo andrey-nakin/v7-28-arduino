@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <scpimm/scpimm.h>
 #include "config.h"
+#include "consts.h"
 #include "pins.h"
 
 /******************************************************************************
@@ -56,7 +57,7 @@ static void readNumber(scpi_number_t * result) {
 		| (digitalRead(PIN_SIGN_2) ? 2 : 0)
 		| (digitalRead(PIN_SIGN_1) ? 1 : 0);
 
-	if (CODE_SIGN_OVERFLOW == sign) {
+	if (V7_28_CODE_SIGN_OVERFLOW == sign) {
     	result->type = SCPI_NUM_NUMBER;    // TODO
 		return;
 	}
@@ -71,7 +72,7 @@ static void readNumber(scpi_number_t * result) {
 		+ 1.0e-1 * d5
 		+ 1.0 * d6;
 
-	if (CODE_SIGN_NEGATIVE == sign) {
+	if (V7_28_CODE_SIGN_NEGATIVE == sign) {
 		res = -res;
 	}
 
@@ -250,6 +251,9 @@ static scpimm_mode_t supported_modes() {
 }
 
 static bool_t set_mode(const scpimm_mode_t mode) {
+	uint8_t expected;
+	int n = V7_28_SET_MODE_MAX_STEPS;
+
 	switch (mode) {
 		case SCPIMM_MODE_DCV:
             digitalWrite(PIN_DISABLE, LOW);
@@ -259,6 +263,8 @@ static bool_t set_mode(const scpimm_mode_t mode) {
 			digitalWrite(PIN_MODE_8, HIGH);
 			digitalWrite(PIN_MODE_16, LOW);
             digitalWrite(PIN_DISABLE, HIGH);
+
+			expected = V7_28_READ_MODE_DCV;
 			break;			
 
 		case SCPIMM_MODE_DCV_RATIO:
@@ -269,6 +275,8 @@ static bool_t set_mode(const scpimm_mode_t mode) {
 			digitalWrite(PIN_MODE_8, HIGH);
 			digitalWrite(PIN_MODE_16, HIGH);
             digitalWrite(PIN_DISABLE, HIGH);
+
+			expected = V7_28_READ_MODE_DCV_RATIO;
 			break;			
 
 		case SCPIMM_MODE_ACV:
@@ -279,6 +287,8 @@ static bool_t set_mode(const scpimm_mode_t mode) {
 			digitalWrite(PIN_MODE_8, LOW);
 			digitalWrite(PIN_MODE_16, LOW);
             digitalWrite(PIN_DISABLE, HIGH);
+
+			expected = V7_28_READ_MODE_ACV;
 			break;			
 
 		case SCPIMM_MODE_RESISTANCE_2W:
@@ -289,6 +299,8 @@ static bool_t set_mode(const scpimm_mode_t mode) {
 			digitalWrite(PIN_MODE_8, HIGH);
 			digitalWrite(PIN_MODE_16, LOW);
             digitalWrite(PIN_DISABLE, HIGH);
+
+			expected = V7_28_READ_MODE_RESISTANCE_2W;
 			break;			
 
 		default:
@@ -296,7 +308,23 @@ static bool_t set_mode(const scpimm_mode_t mode) {
 			return FALSE;
 	}
 
-	return TRUE;
+	while (n--) {
+		uint8_t read_mode;
+
+		delay(V7_28_SET_MODE_DELAY);
+
+		read_mode = 
+	 		(digitalRead(PIN_READ_MODE_8) ? 8 : 0)
+			| (digitalRead(PIN_READ_MODE_4) ? 4 : 0)
+			| (digitalRead(PIN_READ_MODE_2) ? 2 : 0)
+			| (digitalRead(PIN_READ_MODE_1) ? 1 : 0);
+		if (read_mode == expected) {
+			return TRUE;
+		}
+	}
+
+	// multimeter could not set to given mode
+	return FALSE;
 }
 
 static bool_t set_range(scpimm_mode_t mode, const scpi_number_t* range) {

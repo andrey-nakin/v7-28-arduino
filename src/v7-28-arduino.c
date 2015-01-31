@@ -9,7 +9,7 @@
 ******************************************************************************/
 
 static scpimm_mode_t supported_modes();
-static bool_t set_mode(scpimm_mode_t mode);
+static int16_t set_mode(const scpimm_mode_t mode, const scpi_number_t* range, const scpi_number_t* resolution);
 static bool_t set_range(scpimm_mode_t mode, const scpi_number_t* range);
 static bool_t get_range(scpimm_mode_t mode, scpi_number_t* range);
 static bool_t start_measure();
@@ -250,63 +250,43 @@ static scpimm_mode_t supported_modes() {
 		| SCPIMM_MODE_RESISTANCE_2W;
 }
 
-static bool_t set_mode(const scpimm_mode_t mode) {
-	uint8_t expected;
+static int16_t set_mode(const scpimm_mode_t mode, const scpi_number_t* range, const scpi_number_t* resolution) {
+	uint8_t mode_code, expected;
 	int n = V7_28_SET_MODE_MAX_STEPS;
 
 	switch (mode) {
 		case SCPIMM_MODE_DCV:
-            digitalWrite(PIN_DISABLE, LOW);
-			digitalWrite(PIN_MODE_1, LOW);
-			digitalWrite(PIN_MODE_2, HIGH);
-			digitalWrite(PIN_MODE_4, HIGH);
-			digitalWrite(PIN_MODE_8, HIGH);
-			digitalWrite(PIN_MODE_16, LOW);
-            digitalWrite(PIN_DISABLE, HIGH);
-
+			mode_code = V7_28_MODE_DCV;
 			expected = V7_28_READ_MODE_DCV;
 			break;			
 
 		case SCPIMM_MODE_DCV_RATIO:
-            digitalWrite(PIN_DISABLE, LOW);
-			digitalWrite(PIN_MODE_1, HIGH);
-			digitalWrite(PIN_MODE_2, HIGH);
-			digitalWrite(PIN_MODE_4, HIGH);
-			digitalWrite(PIN_MODE_8, HIGH);
-			digitalWrite(PIN_MODE_16, HIGH);
-            digitalWrite(PIN_DISABLE, HIGH);
-
+			mode_code = V7_28_MODE_DCV_RATIO;
 			expected = V7_28_READ_MODE_DCV_RATIO;
 			break;			
 
 		case SCPIMM_MODE_ACV:
-            digitalWrite(PIN_DISABLE, LOW);
-			digitalWrite(PIN_MODE_1, LOW);
-			digitalWrite(PIN_MODE_2, HIGH);
-			digitalWrite(PIN_MODE_4, HIGH);
-			digitalWrite(PIN_MODE_8, LOW);
-			digitalWrite(PIN_MODE_16, LOW);
-            digitalWrite(PIN_DISABLE, HIGH);
-
+			mode_code = V7_28_MODE_ACV;
 			expected = V7_28_READ_MODE_ACV;
 			break;			
 
 		case SCPIMM_MODE_RESISTANCE_2W:
-            digitalWrite(PIN_DISABLE, LOW);
-			digitalWrite(PIN_MODE_1, HIGH);
-			digitalWrite(PIN_MODE_2, LOW);
-			digitalWrite(PIN_MODE_4, LOW);
-			digitalWrite(PIN_MODE_8, HIGH);
-			digitalWrite(PIN_MODE_16, LOW);
-            digitalWrite(PIN_DISABLE, HIGH);
-
+			mode_code = V7_28_MODE_RESISTANCE_2W;
 			expected = V7_28_READ_MODE_RESISTANCE_2W;
 			break;			
 
 		default:
 			// mode is not supported
-			return FALSE;
+			return SCPI_ERROR_INTERNAL;
 	}
+
+    digitalWrite(PIN_DISABLE, LOW);
+	digitalWrite(PIN_MODE_1, mode_code & 0x01 ? HIGH : LOW);
+	digitalWrite(PIN_MODE_2, mode_code & 0x02 ? HIGH : LOW);
+	digitalWrite(PIN_MODE_4, mode_code & 0x04 ? HIGH : LOW);
+	digitalWrite(PIN_MODE_8, mode_code & 0x08 ? HIGH : LOW);
+	digitalWrite(PIN_MODE_16, mode_code & 0x10 ? HIGH : LOW);
+    digitalWrite(PIN_DISABLE, HIGH);
 
 	while (n--) {
 		uint8_t read_mode;
@@ -319,12 +299,12 @@ static bool_t set_mode(const scpimm_mode_t mode) {
 			| (digitalRead(PIN_READ_MODE_2) ? 2 : 0)
 			| (digitalRead(PIN_READ_MODE_1) ? 1 : 0);
 		if (read_mode == expected) {
-			return TRUE;
+			return SCPI_ERROR_OK;
 		}
 	}
 
 	// multimeter could not set to given mode
-	return FALSE;
+	return SCPI_ERROR_INTERNAL;
 }
 
 static bool_t set_range(scpimm_mode_t mode, const scpi_number_t* range) {

@@ -16,5 +16,11 @@
 #define V7_28_SET_MODE_DELAY		500
 #define V7_28_SET_MODE_MAX_STEPS	4
 
+/* RC pins А, 2, Б, 3, В */
+#define V7_28_MODE_DCV				0x0e
+#define V7_28_MODE_ACV				0x06
+#define V7_28_MODE_RESISTANCE_2W	0x09
+#define V7_28_MODE_DCV_RATIO		0x1f
+
 #endif	//	__CONSTS_H_V7_28_ARDUINO
 

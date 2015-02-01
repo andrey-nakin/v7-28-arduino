@@ -82,15 +82,15 @@
 #define PIN_MAINTENANCE	19
 
 /* RC Jack, Е pin */
-#define PIN_RANGE_1	14
+#define PIN_RANGE_1	12
 /* RC Jack, 6 pin */
-#define PIN_RANGE_2	13
+#define PIN_RANGE_2	11
 /* RC Jack, Д pin */
-#define PIN_RANGE_4	12
+#define PIN_RANGE_4	10
 /* RC Jack, 5 pin */
-#define PIN_RANGE_8	11
+#define PIN_RANGE_8	9
 /* RC Jack, Г pin */
-#define PIN_AUTO_RANGE	10
+#define PIN_AUTO_RANGE	1
 
 /* RC Jack, В pin */
 #define PIN_MODE_1	8
@@ -106,7 +106,7 @@
 /* RC Jack, 8 pin */
 #define PIN_START	17
 /* RC Jack, 4 pin */
-#define PIN_REMOTE	9
+#define PIN_REMOTE	14
 /* RC Jack, 7 pin */
 #define PIN_AUTOSTART	15
 /* RC Jack, Ж pin */
@@ -114,8 +114,6 @@
 
 /* RC Jack, "З" pin */
 #define PIN_RESERVED_5V_1   0
-/* RC Jack, 9 pin */
-#define PIN_RESERVED_5V_2   1
 
 #endif	//	__PINS_H_V7_28_ARDUINO
 

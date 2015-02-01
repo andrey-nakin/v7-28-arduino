@@ -26,10 +26,6 @@ static scpimm_interface_t scpimm_interface = {
 	supported_modes,
 	set_mode,
 	get_mode,
-	set_range,
-	get_range,
-	NULL,
-	NULL,
 	start_measure,
 	send,
 	set_remote,
@@ -54,7 +50,19 @@ static struct {
   Internal functions
 ******************************************************************************/
 
-static uint8_t readDigit(uint8_t pin1, uint8_t pin2, uint8_t pin4, uint8_t pin8) {
+static uint8_t read_1bit(int pin1) {
+	return (uint8_t) (digitalRead(pin1) ? 1 : 0);
+}
+
+static uint8_t read_3bits(int pin1, int pin2, int pin4) {
+	return (uint8_t) (
+		(digitalRead(pin4) ? 4 : 0)
+		| (digitalRead(pin2) ? 2 : 0)
+		| (digitalRead(pin1) ? 1 : 0)
+	);
+}
+
+static uint8_t read_4bits(int pin1, int pin2, int pin4, int pin8) {
 	return (uint8_t) (
 		(digitalRead(pin8) ? 8 : 0)
 		| (digitalRead(pin4) ? 4 : 0)
@@ -63,17 +71,29 @@ static uint8_t readDigit(uint8_t pin1, uint8_t pin2, uint8_t pin4, uint8_t pin8)
 	);
 }
 
+static void write_4bits(int pin1, int pin2, int pin4, int pin8, uint8_t value) {
+	digitalWrite(pin1, (value & 0x01) != 0 ? HIGH : LOW);
+	digitalWrite(pin2, (value & 0x02) != 0 ? HIGH : LOW);
+	digitalWrite(pin4, (value & 0x04) != 0 ? HIGH : LOW);
+	digitalWrite(pin8, (value & 0x08) != 0 ? HIGH : LOW);
+}
+
+static void write_5bits(int pin1, int pin2, int pin4, int pin8, int pin16, uint8_t value) {
+	digitalWrite(pin1, (value & 0x01) != 0 ? HIGH : LOW);
+	digitalWrite(pin2, (value & 0x02) != 0 ? HIGH : LOW);
+	digitalWrite(pin4, (value & 0x04) != 0 ? HIGH : LOW);
+	digitalWrite(pin8, (value & 0x08) != 0 ? HIGH : LOW);
+	digitalWrite(pin16, (value & 0x10) != 0 ? HIGH : LOW);
+}
+
 static void readNumber(scpi_number_t * result) {
-        int d6 = digitalRead(PIN_DIGIT6_1) ? 1 : 0;
-        int d5 = readDigit(PIN_DIGIT5_1, PIN_DIGIT5_2, PIN_DIGIT5_4, PIN_DIGIT5_8);
-        int d4 = readDigit(PIN_DIGIT4_1, PIN_DIGIT4_2, PIN_DIGIT4_4, PIN_DIGIT4_8);
-        int d3 = readDigit(PIN_DIGIT3_1, PIN_DIGIT3_2, PIN_DIGIT3_4, PIN_DIGIT3_8);
-        int d2 = readDigit(PIN_DIGIT2_1, PIN_DIGIT2_2, PIN_DIGIT2_4, PIN_DIGIT2_8);
-        int d1 = readDigit(PIN_DIGIT1_1, PIN_DIGIT1_2, PIN_DIGIT1_4, PIN_DIGIT1_8);
-	const uint8_t sign = 
-		(digitalRead(PIN_SIGN_4) ? 4 : 0)
-		| (digitalRead(PIN_SIGN_2) ? 2 : 0)
-		| (digitalRead(PIN_SIGN_1) ? 1 : 0);
+	const uint8_t d6 = read_1bit(PIN_DIGIT6_1);
+	const uint8_t d5 = read_4bits(PIN_DIGIT5_1, PIN_DIGIT5_2, PIN_DIGIT5_4, PIN_DIGIT5_8);
+	const uint8_t d4 = read_4bits(PIN_DIGIT4_1, PIN_DIGIT4_2, PIN_DIGIT4_4, PIN_DIGIT4_8);
+	const uint8_t d3 = read_4bits(PIN_DIGIT3_1, PIN_DIGIT3_2, PIN_DIGIT3_4, PIN_DIGIT3_8);
+	const uint8_t d2 = read_4bits(PIN_DIGIT2_1, PIN_DIGIT2_2, PIN_DIGIT2_4, PIN_DIGIT2_8);
+	const uint8_t d1 = read_4bits(PIN_DIGIT1_1, PIN_DIGIT1_2, PIN_DIGIT1_4, PIN_DIGIT1_8);
+	const uint8_t sign = read_3bits(PIN_SIGN_1, PIN_SIGN_2, PIN_SIGN_4);
 
 	if (V7_28_CODE_SIGN_OVERFLOW == sign) {
     	result->type = SCPI_NUM_NUMBER;    // TODO
@@ -94,10 +114,7 @@ static void readNumber(scpi_number_t * result) {
 		res = -res;
 	}
 
-	uint8_t order =
-		(digitalRead(PIN_ORDER_4) ? 4 : 0)
-		| (digitalRead(PIN_ORDER_2) ? 2 : 0)
-		| (digitalRead(PIN_ORDER_1) ? 1 : 0);
+	uint8_t order = read_3bits(PIN_ORDER_1, PIN_ORDER_2, PIN_ORDER_4);
 	if (digitalRead(PIN_ORDER_SIGN)) {
 		while (order--) {
 			res *= 0.1;
@@ -115,6 +132,10 @@ static void valueIsReady() {
 	scpi_number_t num;
 	readNumber(&num);
 	SCPIMM_read_value(&num);
+}
+
+static void set_disabled(bool_t disabled) {
+    digitalWrite(PIN_DISABLE, disabled ? LOW : HIGH);
 }
 
 static void setupPins() {
@@ -182,37 +203,25 @@ static void setupPins() {
 	pinMode(PIN_DISABLE, OUTPUT);
 
 	pinMode(PIN_RESERVED_5V_1, OUTPUT);
-	pinMode(PIN_RESERVED_5V_2, OUTPUT);
 
     attachInterrupt(5, valueIsReady, RISING);
     
-    digitalWrite(PIN_DISABLE, LOW);
+	set_disabled(TRUE);
 
     digitalWrite(PIN_RESERVED_5V_1, HIGH);
-    digitalWrite(PIN_RESERVED_5V_2, HIGH);
-
     digitalWrite(PIN_REMOTE, LOW);
     digitalWrite(PIN_AUTOSTART, LOW);
     digitalWrite(PIN_AUTO_RANGE, HIGH);
     digitalWrite(PIN_START, HIGH);
     
-    digitalWrite(PIN_MODE_16, LOW);
-    digitalWrite(PIN_MODE_8, HIGH);
-    digitalWrite(PIN_MODE_4, HIGH);
-    digitalWrite(PIN_MODE_2, HIGH);
-    digitalWrite(PIN_MODE_1, LOW);
-    
-    digitalWrite(PIN_DISABLE, HIGH);
+	set_disabled(FALSE);
 }
 
 static void setRange(const uint8_t bits) {
-    digitalWrite(PIN_DISABLE, LOW);
-	digitalWrite(PIN_RANGE_1, (bits & 0x01) != 0 ? HIGH : LOW);
-	digitalWrite(PIN_RANGE_2, (bits & 0x02) != 0 ? HIGH : LOW);
-	digitalWrite(PIN_RANGE_4, (bits & 0x04) != 0 ? HIGH : LOW);
-	digitalWrite(PIN_RANGE_8, (bits & 0x08) != 0 ? HIGH : LOW);
+    set_disabled(TRUE);
+	write_4bits(PIN_RANGE_1,PIN_RANGE_2, PIN_RANGE_4, PIN_RANGE_8, bits); 
 	digitalWrite(PIN_AUTO_RANGE, LOW);
-    digitalWrite(PIN_DISABLE, HIGH);
+    set_disabled(FALSE);
 }
 
 static void setAutoRange() {
@@ -259,16 +268,19 @@ static void set_number_range(float r) {
 	);
 }
 
-/******************************************************************************
-  Multimeter interface implementation
-******************************************************************************/
-
-static scpimm_mode_t supported_modes() {
-	return SCPIMM_MODE_DCV | SCPIMM_MODE_DCV_RATIO | SCPIMM_MODE_ACV 
-		| SCPIMM_MODE_RESISTANCE_2W;
+static bool_t is_state_initialized(uint8_t bits) {
+	return bits == (v7_28_state.initialized & bits);
 }
 
-static int16_t set_mode(const scpimm_mode_t mode, const scpi_number_t* range, const scpi_number_t* resolution) {
+static void set_state_initialized(uint8_t bits) {
+	v7_28_state.initialized |= bits;
+}
+
+static bool_t is_mode_initialized(void) {
+	return is_state_initialized(V7_28_STATE_INITIALIZED_MODE);
+}
+
+static int16_t set_mode_impl(const scpimm_mode_t mode, const scpi_number_t* range, const scpi_number_t* resolution) {
 	uint8_t mode_code, expected;
 	int n = V7_28_SET_MODE_MAX_STEPS;
 
@@ -298,52 +310,63 @@ static int16_t set_mode(const scpimm_mode_t mode, const scpi_number_t* range, co
 			return V7_28_ERROR_INVALID_MODE;
 	}
 
-    digitalWrite(PIN_DISABLE, LOW);
-	digitalWrite(PIN_MODE_1, mode_code & 0x01 ? HIGH : LOW);
-	digitalWrite(PIN_MODE_2, mode_code & 0x02 ? HIGH : LOW);
-	digitalWrite(PIN_MODE_4, mode_code & 0x04 ? HIGH : LOW);
-	digitalWrite(PIN_MODE_8, mode_code & 0x08 ? HIGH : LOW);
-	digitalWrite(PIN_MODE_16, mode_code & 0x10 ? HIGH : LOW);
-    digitalWrite(PIN_DISABLE, HIGH);
+    set_disabled(TRUE);
+	write_5bits(PIN_MODE_1, PIN_MODE_2, PIN_MODE_4, PIN_MODE_8, PIN_MODE_16, mode_code);
+    set_disabled(FALSE);
 
 	while (n--) {
-		uint8_t read_mode;
-
-		delay(V7_28_SET_MODE_DELAY);
-
-		read_mode = 
-	 		(digitalRead(PIN_READ_MODE_8) ? 8 : 0)
-			| (digitalRead(PIN_READ_MODE_4) ? 4 : 0)
-			| (digitalRead(PIN_READ_MODE_2) ? 2 : 0)
-			| (digitalRead(PIN_READ_MODE_1) ? 1 : 0);
+		const uint8_t read_mode = read_4bits(PIN_READ_MODE_1, PIN_READ_MODE_2, PIN_READ_MODE_4, PIN_READ_MODE_8);
 		if (read_mode == expected) {
 			v7_28_state.mode = mode;
-			v7_28_state.initialized |= V7_28_STATE_INITIALIZED_MODE;
+			set_state_initialized(V7_28_STATE_INITIALIZED_MODE);
 			return SCPI_ERROR_OK;
 		}
+
+		delay(V7_28_SET_MODE_DELAY);
 	}
 
 	// multimeter could not set to given mode
 	return V7_28_ERROR_SET_MODE;
 }
 
+/******************************************************************************
+  Multimeter interface implementation
+******************************************************************************/
+
+static scpimm_mode_t supported_modes() {
+	return SCPIMM_MODE_DCV | SCPIMM_MODE_DCV_RATIO | SCPIMM_MODE_ACV 
+		| SCPIMM_MODE_RESISTANCE_2W;
+}
+
+static int16_t set_mode(const scpimm_mode_t mode, const scpi_number_t* range, const scpi_number_t* resolution) {
+	if (!is_mode_initialized() || v7_28_state.mode != mode) {
+		// current mode is different or not specified, change it to given one
+		return set_mode_impl(mode, range, resolution);
+	} else {
+		// keep current mode intact
+
+		// TODO check range, resolution
+		return SCPI_ERROR_OK;
+	}
+}
+
 static int16_t get_mode(scpimm_mode_t* mode, scpi_number_t* range, scpi_number_t* resolution) {
 	if (mode) {
-		if (!(v7_28_state.initialized & V7_28_STATE_INITIALIZED_MODE)) {
+		if (!is_mode_initialized()) {
 			return V7_28_ERROR_MODE_NOT_INITIALIZED;
 		}
 		*mode = v7_28_state.mode;
 	}
 
 	if (range) {
-		if (!(v7_28_state.initialized & V7_28_STATE_INITIALIZED_RANGE)) {
+		if (!is_state_initialized(V7_28_STATE_INITIALIZED_RANGE)) {
 			return V7_28_ERROR_RANGE_NOT_INITIALIZED;
 		}
 		*range = v7_28_state.range;
 	}
 
 	if (resolution) {
-		if (!(v7_28_state.initialized & V7_28_STATE_INITIALIZED_RESOLUTION)) {
+		if (!is_state_initialized(V7_28_STATE_INITIALIZED_RESOLUTION)) {
 			return V7_28_ERROR_RESOLUTION_NOT_INITIALIZED;
 		}
 		*resolution = v7_28_state.resolution;
@@ -352,6 +375,7 @@ static int16_t get_mode(scpimm_mode_t* mode, scpi_number_t* range, scpi_number_t
 	return SCPI_ERROR_OK;
 }
 
+/* TODO deprecated */
 static bool_t set_range(scpimm_mode_t mode, const scpi_number_t* range) {
 	switch (range->type) {
 		case SCPI_NUM_MIN:
@@ -378,6 +402,7 @@ static bool_t set_range(scpimm_mode_t mode, const scpi_number_t* range) {
 	return TRUE;
 }
 
+/* TODO deprecated */
 static bool_t get_range(scpimm_mode_t mode, scpi_number_t* range) {
 	switch (range->type) {
 		case SCPI_NUM_MIN:
@@ -449,6 +474,8 @@ static const char* get_error_description(int16_t error) {
 void setup() {
 	Serial.begin(BAUD_RATE);
 	setupPins();
+	set_mode(SCPIMM_MODE_DCV, NULL, NULL);
+
 	SCPIMM_setup(&scpimm_interface);
 }
 

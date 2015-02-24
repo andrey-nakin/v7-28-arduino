@@ -115,5 +115,7 @@
 /* RC Jack, "З" pin */
 #define PIN_RESERVED_5V_1   0
 
+#define INT_MEAS_START  1
+
 #endif	//	__PINS_H_V7_28_ARDUINO
 

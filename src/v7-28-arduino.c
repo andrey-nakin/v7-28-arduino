@@ -204,7 +204,7 @@ static void setupPins() {
 
 	pinMode(PIN_RESERVED_5V_1, OUTPUT);
 
-    attachInterrupt(5, valueIsReady, RISING);
+    attachInterrupt(INT_MEAS_START, valueIsReady, RISING);
     
 	set_disabled(TRUE);
 
@@ -212,7 +212,7 @@ static void setupPins() {
     digitalWrite(PIN_REMOTE, LOW);
     digitalWrite(PIN_AUTOSTART, LOW);
     digitalWrite(PIN_AUTO_RANGE, HIGH);
-    digitalWrite(PIN_START, HIGH);
+    digitalWrite(PIN_START, LOW);
     
 	set_disabled(FALSE);
 }

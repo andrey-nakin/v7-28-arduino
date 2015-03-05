@@ -90,7 +90,7 @@
 /* RC Jack, 5 pin */
 #define PIN_RANGE_8	9
 /* RC Jack, Г pin */
-#define PIN_AUTO_RANGE	1
+#define PIN_AUTO_RANGE	21
 
 /* RC Jack, В pin */
 #define PIN_MODE_1	8
@@ -112,8 +112,7 @@
 /* RC Jack, Ж pin */
 #define PIN_DISABLE	16
 
-/* RC Jack, "З" pin */
-#define PIN_RESERVED_5V_1   0
+#define INT_MEAS_START  1
 
 #endif	//	__PINS_H_V7_28_ARDUINO
 

@@ -217,15 +217,17 @@ static void setupPins() {
 	set_disabled(FALSE);
 }
 
+static void set_auto_range_disabled(bool_t disabled) {
+	digitalWrite(PIN_AUTO_RANGE, disabled ? LOW : HIGH);
+}
+
 static void setRange(const uint8_t bits) {
-    set_disabled(TRUE);
 	write_4bits(PIN_RANGE_1,PIN_RANGE_2, PIN_RANGE_4, PIN_RANGE_8, bits); 
-	digitalWrite(PIN_AUTO_RANGE, LOW);
-    set_disabled(FALSE);
+	set_auto_range_disabled(TRUE);
 }
 
 static void setAutoRange() {
-	digitalWrite(PIN_AUTO_RANGE, HIGH);
+	set_auto_range_disabled(FALSE);
 }
 
 static uint8_t min_range_code(scpimm_mode_t mode) {
@@ -280,6 +282,27 @@ static bool_t is_mode_initialized(void) {
 	return is_state_initialized(V7_28_STATE_INITIALIZED_MODE);
 }
 
+static void set_range_impl(scpimm_mode_t mode, const scpi_number_t* range) {
+	// TODO: question 28
+	switch (range->type) {
+		case SCPI_NUM_MIN:
+			setRange(min_range_code(mode));
+			break;
+
+		case SCPI_NUM_MAX:
+			setRange(max_range_code(mode));
+			break;
+
+		case SCPI_NUM_DEF:
+			setAutoRange();
+			break;
+
+		case SCPI_NUM_NUMBER:
+			set_number_range((float) range->value);
+			break;
+	}
+}
+
 static int16_t set_mode_impl(const scpimm_mode_t mode, const scpi_number_t* range, const scpi_number_t* resolution) {
 	uint8_t mode_code, expected;
 	int n = V7_28_SET_MODE_MAX_STEPS;
@@ -312,6 +335,9 @@ static int16_t set_mode_impl(const scpimm_mode_t mode, const scpi_number_t* rang
 
     set_disabled(TRUE);
 	write_5bits(PIN_MODE_1, PIN_MODE_2, PIN_MODE_4, PIN_MODE_8, PIN_MODE_16, mode_code);
+	if (range) {
+		set_range_impl(mode, range);
+	}
     set_disabled(FALSE);
 
 	while (n--) {
@@ -345,7 +371,14 @@ static int16_t set_mode(const scpimm_mode_t mode, const scpi_number_t* range, co
 	} else {
 		// keep current mode intact
 
-		// TODO check range, resolution
+		if (range) {
+			// set range
+			set_disabled(TRUE);
+			set_range_impl(mode, range);
+			set_disabled(FALSE);
+		}
+
+		// TODO check resolution
 		return SCPI_ERROR_OK;
 	}
 }
@@ -373,33 +406,6 @@ static int16_t get_mode(scpimm_mode_t* mode, scpi_number_t* range, scpi_number_t
 	}
 
 	return SCPI_ERROR_OK;
-}
-
-/* TODO deprecated */
-static bool_t set_range(scpimm_mode_t mode, const scpi_number_t* range) {
-	switch (range->type) {
-		case SCPI_NUM_MIN:
-			setRange(min_range_code(mode));
-			break;
-
-		case SCPI_NUM_MAX:
-			setRange(max_range_code(mode));
-			break;
-
-		case SCPI_NUM_DEF:
-			setAutoRange();
-			break;
-
-		case SCPI_NUM_NUMBER:
-			set_number_range((float) range->value);
-			break;
-
-		default:
-			/* invalid parameters */
-			return FALSE;
-	}
-
-	return TRUE;
 }
 
 /* TODO deprecated */

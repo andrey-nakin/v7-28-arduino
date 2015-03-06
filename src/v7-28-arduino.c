@@ -365,12 +365,12 @@ static int16_t set_mode(const scpimm_mode_t mode, const scpimm_mode_params_t* pa
 
 	if (params) {
 		set_range(mode, params->range);
-		set_state_initialized(V7_28_STATE_INITIALIZED_RANGE);
 		v7_28_state.range = params->range;
+		set_state_initialized(V7_28_STATE_INITIALIZED_RANGE);
 
 		set_auto_range(params->auto_range);
-		set_state_initialized(V7_28_STATE_INITIALIZED_AUTO_RANGE);
 		v7_28_state.auto_range = params->auto_range;
+		set_state_initialized(V7_28_STATE_INITIALIZED_AUTO_RANGE);
 
 		// params->resolution is ignored
 	}

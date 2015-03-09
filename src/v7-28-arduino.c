@@ -413,7 +413,11 @@ static int16_t get_mode(scpimm_mode_t* mode, scpimm_mode_params_t* params) {
 		}
 		params->auto_range = v7_28_state.auto_range;
 
-		// TODO
+		if (!is_state_initialized(V7_28_STATE_INITIALIZED_RANGE)) {
+			return V7_28_ERROR_RANGE_NOT_INITIALIZED;
+		}
+		params->range = v7_28_state.range;
+		params->resolution = V7_28_RESOLUTION;
 	}
 
 	return SCPI_ERROR_OK;
@@ -463,11 +467,11 @@ static int16_t get_possible_resolution(const scpimm_mode_t /* mode */, const dou
 	const double resolution = range * 1.0e-6;
 
 	if (min_resolution) {
-		*min_resolution = resolution;
+		*min_resolution = V7_28_RESOLUTION;
 	}
 
 	if (max_resolution) {
-		*max_resolution = resolution;
+		*max_resolution = V7_28_RESOLUTION;
 	}
 
 	return SCPI_ERROR_OK;

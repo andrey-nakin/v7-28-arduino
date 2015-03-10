@@ -9,11 +9,12 @@
 ******************************************************************************/
 
 static scpimm_mode_t supported_modes();
+static int16_t reset();
 static int16_t set_mode(const scpimm_mode_t mode, const scpimm_mode_params_t* params);
 static int16_t get_mode(scpimm_mode_t* mode, scpimm_mode_params_t* params);
-static int16_t get_possible_range(scpimm_mode_t mode, double* min_range, double* max_range);
+static int16_t get_allowed_ranges(scpimm_mode_t mode, const double** const ranges, const double** const overruns);
 static int16_t get_possible_resolution(scpimm_mode_t  mode, double range, double* min_resolution, double* max_resolution);
-static bool_t start_measure();
+static int16_t start_measure();
 static size_t send(const uint8_t* data, size_t len);
 static void set_remote(bool_t remote, bool_t lock);
 static const char* get_error_description(int16_t error);
@@ -25,10 +26,11 @@ static void set_auto_range(const bool_t enabled);
 
 static scpimm_interface_t scpimm_interface = {
 	supported_modes,
+	reset,
 	set_mode,
 	get_mode,
-	get_possible_range,
-	get_possible_resolution,
+	get_allowed_ranges,
+	NULL,// TODOget_possible_resolution,
 	start_measure,
 	send,
 	set_remote,
@@ -37,6 +39,18 @@ static scpimm_interface_t scpimm_interface = {
 	NULL,
 	get_error_description
 };
+
+static const double dcv_ranges[] =   {0.1, 1.0, 10.0, 100.0, 1000.0, -1};
+static const double dcv_overruns[] = {1.2, 1.2, 1.2,  1.2,   1.001,  -1};
+static const uint8_t dcv_range_codes[] = {V7_28_RANGE_DCV_0, V7_28_RANGE_DCV_1, V7_28_RANGE_DCV_2, V7_28_RANGE_DCV_3, V7_28_RANGE_DCV_4};
+
+static const double acv_ranges[] =   {1.0, 10.0, 100.0, 1000.0, -1};
+static const double acv_overruns[] = {1.2, 1.2,  1.2,   1.2,    -1};
+static const uint8_t acv_range_codes[] = {V7_28_RANGE_ACV_0, V7_28_RANGE_ACV_1, V7_28_RANGE_ACV_2, V7_28_RANGE_ACV_3};
+
+static const double resistance_ranges[] =   {0.1, 1.0, 10.0, 100.0, 1000.0, 10000.0, -1};
+static const double resistance_overruns[] = {1.2, 1.2, 1.2,  1.2,   1.2,    1.2,     -1};
+static const uint8_t resistance_range_codes[] = {V7_28_RANGE_RESISTANCE_0, V7_28_RANGE_RESISTANCE_1, V7_28_RANGE_RESISTANCE_2, V7_28_RANGE_RESISTANCE_3, V7_28_RANGE_RESISTANCE_4, V7_28_RANGE_RESISTANCE_5};
 
 /******************************************************************************
   Global variables
@@ -209,15 +223,6 @@ static void setupPins() {
 	pinMode(PIN_DISABLE, OUTPUT);
 
     attachInterrupt(INT_MEAS_START, valueIsReady, RISING);
-    
-	set_disabled(TRUE);
-	set_auto_range(TRUE);	//  enable autorange
-
-    digitalWrite(PIN_REMOTE, LOW);  //  enable remote mode
-    digitalWrite(PIN_AUTOSTART, LOW);   //  disable autostart
-    digitalWrite(PIN_START, LOW);
-    
-	set_disabled(FALSE);
 }
 
 static void set_auto_range(const bool_t enabled) {
@@ -236,7 +241,7 @@ static bool_t is_mode_initialized(void) {
 	return is_state_initialized(V7_28_STATE_INITIALIZED_MODE);
 }
 
-static uint8_t get_dcv_range_code(double range) {
+static uint8_t get_dcv_range_code(size_t range_index) {
 	if (range <= 1.0e-1) {
 		return V7_28_RANGE_DCV_0;
 	}
@@ -252,7 +257,7 @@ static uint8_t get_dcv_range_code(double range) {
 	return V7_28_RANGE_DCV_4;
 }
 
-static uint8_t get_acv_range_code(double range) {
+static uint8_t get_acv_range_code(size_t range_index) {
 	if (range <= 1.0e0) {
 		return V7_28_RANGE_ACV_0;
 	}
@@ -265,7 +270,7 @@ static uint8_t get_acv_range_code(double range) {
 	return V7_28_RANGE_ACV_3;
 }
 
-static uint8_t get_resistance_range_code(double range) {
+static uint8_t get_resistance_range_code(size_t range_index) {
 	if (range <= 1.0e-1) {
 		return V7_28_RANGE_RESISTANCE_0;
 	}
@@ -284,23 +289,21 @@ static uint8_t get_resistance_range_code(double range) {
 	return V7_28_RANGE_RESISTANCE_5;
 }
 
-static void set_range(const scpimm_mode_t mode, double range) {
+static void set_range(const scpimm_mode_t mode, size_t range_index) {
 	uint8_t code;
-
-	range *= 0.99;
 
 	switch (mode) {
 	case SCPIMM_MODE_DCV:
 	case SCPIMM_MODE_DCV_RATIO:
-		code = get_dcv_range_code(range);
+		code = get_dcv_range_code(range_index);
 		break;
 
 	case SCPIMM_MODE_ACV:
-		code = get_acv_range_code(range);
+		code = get_acv_range_code(range_index);
 		break;
 
 	case SCPIMM_MODE_RESISTANCE_2W:
-		code = get_resistance_range_code(range);
+		code = get_resistance_range_code(range_index);
 		break;
 
 	default:
@@ -317,6 +320,19 @@ static void set_range(const scpimm_mode_t mode, double range) {
 static scpimm_mode_t supported_modes() {
 	return SCPIMM_MODE_DCV | SCPIMM_MODE_DCV_RATIO | SCPIMM_MODE_ACV
 		| SCPIMM_MODE_RESISTANCE_2W;
+}
+
+static int16_t reset() {
+	set_disabled(TRUE);
+	set_auto_range(TRUE);	//  enable autorange
+
+    digitalWrite(PIN_REMOTE, LOW);  //  enable remote mode
+    digitalWrite(PIN_AUTOSTART, LOW);   //  disable autostart
+    digitalWrite(PIN_START, LOW);
+
+	set_disabled(FALSE);
+
+	return SCPI_ERROR_OK;
 }
 
 static int16_t set_mode(const scpimm_mode_t mode, const scpimm_mode_params_t* params) {
@@ -423,6 +439,42 @@ static int16_t get_mode(scpimm_mode_t* mode, scpimm_mode_params_t* params) {
 	return SCPI_ERROR_OK;
 }
 
+static int16_t get_allowed_ranges(scpimm_mode_t mode, const double** const ranges, const double** const overruns) {
+	const double *ranges_src, *overruns_src;
+
+	switch (mode) {
+		case SCPIMM_MODE_DCV:
+		case SCPIMM_MODE_DCV_RATIO:
+			ranges_src = dcv_ranges;
+			overruns_src = dcv_overruns;
+			break;
+
+		case SCPIMM_MODE_ACV:
+			ranges_src = acv_ranges;
+			overruns_src = acv_overruns;
+			break;
+
+		case SCPIMM_MODE_RESISTANCE_2W:
+			ranges_src = resistance_ranges;
+			overruns_src = resistance_overruns;
+			break;
+
+		default:
+			// mode is not supported
+			return V7_28_ERROR_INVALID_MODE;
+	}
+
+	if (ranges) {
+		*ranges = ranges_src;
+	}
+
+	if (overruns) {
+		*overruns = overruns_src;
+	}
+
+	return SCPI_ERROR_OK;
+}
+
 static int16_t get_possible_range(const scpimm_mode_t mode, double* const min_range, double* const max_range) {
 	double min_value, max_value;
 
@@ -477,11 +529,11 @@ static int16_t get_possible_resolution(const scpimm_mode_t /* mode */, const dou
 	return SCPI_ERROR_OK;
 }
 
-static bool_t start_measure() {
+static int16_t start_measure() {
 	digitalWrite(PIN_START, HIGH);
 	delayMicroseconds(20);
 	digitalWrite(PIN_START, LOW);
-	return TRUE;
+	return SCPI_ERROR_OK;
 }
 
 static size_t send(const uint8_t* data, const size_t len) {

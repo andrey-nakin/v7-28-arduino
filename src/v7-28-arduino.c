@@ -4,6 +4,14 @@
 #include "consts.h"
 #include "pins.h"
 
+#define STATIC_ASSERT(COND, MSG) typedef char static_assertion_##MSG[(COND) ? 1 : -1]
+#define P99_PROTECT(...) __VA_ARGS__
+#define FOR_4(expr) expr ## 0, expr ## 1, expr ## 2, expr ## 3
+#define FOR_5(expr) expr ## 0, expr ## 1, expr ## 2, expr ## 3, expr ## 4
+#define FOR_6(expr) expr ## 0, expr ## 1, expr ## 2, expr ## 3, expr ## 4, expr ## 5
+#define REPEAT_4(expr) expr, expr, expr, expr
+#define REPEAT_6(expr) expr, expr, expr, expr, expr, expr
+
 /******************************************************************************
   Forward declarations
 ******************************************************************************/
@@ -13,12 +21,11 @@ static int16_t reset();
 static int16_t set_mode(const scpimm_mode_t mode, const scpimm_mode_params_t* params);
 static int16_t get_mode(scpimm_mode_t* mode, scpimm_mode_params_t* params);
 static int16_t get_allowed_ranges(scpimm_mode_t mode, const double** const ranges, const double** const overruns);
-static int16_t get_possible_resolution(scpimm_mode_t  mode, double range, double* min_resolution, double* max_resolution);
+static int16_t get_allowed_resolutions(scpimm_mode_t mode, size_t range_index, const double** resolutions);
 static int16_t start_measure();
 static size_t send(const uint8_t* data, size_t len);
 static void set_remote(bool_t remote, bool_t lock);
 static const char* get_error_description(int16_t error);
-static void set_auto_range(const bool_t enabled);
 
 /******************************************************************************
   Global constants
@@ -30,7 +37,7 @@ static scpimm_interface_t scpimm_interface = {
 	set_mode,
 	get_mode,
 	get_allowed_ranges,
-	NULL,// TODOget_possible_resolution,
+	get_allowed_resolutions,
 	start_measure,
 	send,
 	set_remote,
@@ -40,17 +47,40 @@ static scpimm_interface_t scpimm_interface = {
 	get_error_description
 };
 
-static const double dcv_ranges[] =   {0.1, 1.0, 10.0, 100.0, 1000.0, -1};
-static const double dcv_overruns[] = {1.2, 1.2, 1.2,  1.2,   1.001,  -1};
-static const uint8_t dcv_range_codes[] = {V7_28_RANGE_DCV_0, V7_28_RANGE_DCV_1, V7_28_RANGE_DCV_2, V7_28_RANGE_DCV_3, V7_28_RANGE_DCV_4};
+#define	TERMINATOR	-1.0
+#define	RES_ENTRY(range) {range * V7_28_RESOLUTION, TERMINATOR}
+#define DECL_MODE_CONSTANTS(func, ranges, overruns, resolutions, codes) \
+	static const double func ## _ranges[] =   ranges;	\
+	static const double func ## _overruns[] = overruns;	\
+	static const double func ## _resolutions[][2] = resolutions;	\
+	static const uint8_t func ## _range_codes[] = codes;	\
+	STATIC_ASSERT(sizeof(func ## _ranges) / sizeof(func ## _ranges[0]) == sizeof(func ## _overruns) / sizeof(func ## _overruns[0]), func ## _ranges_equals_to_overruns);	\
+	STATIC_ASSERT(sizeof(func ## _ranges) / sizeof(func ## _ranges[0]) == sizeof(func ## _resolutions) / sizeof(func ## _resolutions[0]) + 1, func ## _ranges_equals_to_resolutions);	\
+	STATIC_ASSERT(sizeof(func ## _ranges) / sizeof(func ## _ranges[0]) == sizeof(func ## _range_codes) / sizeof(func ## _range_codes[0]) + 1, func ## _ranges_equals_to_codes)
 
-static const double acv_ranges[] =   {1.0, 10.0, 100.0, 1000.0, -1};
-static const double acv_overruns[] = {1.2, 1.2,  1.2,   1.2,    -1};
-static const uint8_t acv_range_codes[] = {V7_28_RANGE_ACV_0, V7_28_RANGE_ACV_1, V7_28_RANGE_ACV_2, V7_28_RANGE_ACV_3};
+DECL_MODE_CONSTANTS(
+		dcv,
+		P99_PROTECT({FOR_5(V7_28_RANGE_DCV_), TERMINATOR}),
+		P99_PROTECT({REPEAT_4(V7_28_DEF_OVERRUN), 1.001,  TERMINATOR}),
+		P99_PROTECT({RES_ENTRY(V7_28_RANGE_DCV_0), RES_ENTRY(V7_28_RANGE_DCV_1), RES_ENTRY(V7_28_RANGE_DCV_2), RES_ENTRY(V7_28_RANGE_DCV_3), RES_ENTRY(V7_28_RANGE_DCV_4)}),
+		P99_PROTECT({FOR_5(V7_28_RANGE_CODE_DCV_)})
+);
 
-static const double resistance_ranges[] =   {0.1, 1.0, 10.0, 100.0, 1000.0, 10000.0, -1};
-static const double resistance_overruns[] = {1.2, 1.2, 1.2,  1.2,   1.2,    1.2,     -1};
-static const uint8_t resistance_range_codes[] = {V7_28_RANGE_RESISTANCE_0, V7_28_RANGE_RESISTANCE_1, V7_28_RANGE_RESISTANCE_2, V7_28_RANGE_RESISTANCE_3, V7_28_RANGE_RESISTANCE_4, V7_28_RANGE_RESISTANCE_5};
+DECL_MODE_CONSTANTS(
+		acv,
+		P99_PROTECT({FOR_4(V7_28_RANGE_ACV_), TERMINATOR}),
+		P99_PROTECT({REPEAT_4(V7_28_DEF_OVERRUN), TERMINATOR}),
+		P99_PROTECT({RES_ENTRY(V7_28_RANGE_ACV_0), RES_ENTRY(V7_28_RANGE_ACV_1), RES_ENTRY(V7_28_RANGE_ACV_2), RES_ENTRY(V7_28_RANGE_ACV_3)}),
+		P99_PROTECT({FOR_4(V7_28_RANGE_CODE_ACV_)})
+);
+
+DECL_MODE_CONSTANTS(
+		resistance,
+		P99_PROTECT({FOR_6(V7_28_RANGE_RESISTANCE_), TERMINATOR}),
+		P99_PROTECT({REPEAT_6(V7_28_DEF_OVERRUN), TERMINATOR}),
+		P99_PROTECT({RES_ENTRY(V7_28_RANGE_RESISTANCE_0), RES_ENTRY(V7_28_RANGE_RESISTANCE_1), RES_ENTRY(V7_28_RANGE_RESISTANCE_2), RES_ENTRY(V7_28_RANGE_RESISTANCE_3), RES_ENTRY(V7_28_RANGE_RESISTANCE_4), RES_ENTRY(V7_28_RANGE_RESISTANCE_5)}),
+		P99_PROTECT({FOR_6(V7_28_RANGE_CODE_RESISTANCE_)})
+);
 
 /******************************************************************************
   Global variables
@@ -59,7 +89,7 @@ static const uint8_t resistance_range_codes[] = {V7_28_RANGE_RESISTANCE_0, V7_28
 static struct {
 	uint8_t initialized;
 	scpimm_mode_t mode;
-	double range;
+	size_t	range_index;
 	bool_t auto_range;
 } v7_28_state;
 
@@ -71,6 +101,7 @@ static uint8_t read_1bit(int pin1) {
 	return (uint8_t) (digitalRead(pin1) ? 1 : 0);
 }
 
+// read 3-bit number from pins
 static uint8_t read_3bits(int pin1, int pin2, int pin4) {
 	return (uint8_t) (
 		(digitalRead(pin4) ? 4 : 0)
@@ -78,7 +109,9 @@ static uint8_t read_3bits(int pin1, int pin2, int pin4) {
 		| (digitalRead(pin1) ? 1 : 0)
 	);
 }
+#define READ_3_BITS(var) read_3bits(var ## 1, var ## 2, var ## 4)
 
+// read 4-bit number from pins
 static uint8_t read_4bits(int pin1, int pin2, int pin4, int pin8) {
 	return (uint8_t) (
 		(digitalRead(pin8) ? 8 : 0)
@@ -87,14 +120,18 @@ static uint8_t read_4bits(int pin1, int pin2, int pin4, int pin8) {
 		| (digitalRead(pin1) ? 1 : 0)
 	);
 }
+#define READ_4_BITS(var) read_4bits(var ## 1, var ## 2, var ## 4, var ## 8)
 
+// write 4-bit number to pins
 static void write_4bits(int pin1, int pin2, int pin4, int pin8, uint8_t value) {
 	digitalWrite(pin1, (value & 0x01) != 0 ? HIGH : LOW);
 	digitalWrite(pin2, (value & 0x02) != 0 ? HIGH : LOW);
 	digitalWrite(pin4, (value & 0x04) != 0 ? HIGH : LOW);
 	digitalWrite(pin8, (value & 0x08) != 0 ? HIGH : LOW);
 }
+#define WRITE_4_BITS(var, value) write_4bits(var ## 1, var ## 2, var ## 4, var ## 8, value)
 
+// write 5-bit number to pins
 static void write_5bits(int pin1, int pin2, int pin4, int pin8, int pin16, uint8_t value) {
 	digitalWrite(pin1, (value & 0x01) != 0 ? HIGH : LOW);
 	digitalWrite(pin2, (value & 0x02) != 0 ? HIGH : LOW);
@@ -102,15 +139,19 @@ static void write_5bits(int pin1, int pin2, int pin4, int pin8, int pin16, uint8
 	digitalWrite(pin8, (value & 0x08) != 0 ? HIGH : LOW);
 	digitalWrite(pin16, (value & 0x10) != 0 ? HIGH : LOW);
 }
+#define WRITE_5_BITS(var, value) write_5bits(var ## 1, var ## 2, var ## 4, var ## 8, var ## 16, value)
 
+// read float number from voltmeter
 static void readNumber(scpi_number_t * result) {
+#define READ_DIGIT(n) READ_4_BITS(PIN_DIGIT ## n ## _);
+
 	const uint8_t d6 = read_1bit(PIN_DIGIT6_1);
-	const uint8_t d5 = read_4bits(PIN_DIGIT5_1, PIN_DIGIT5_2, PIN_DIGIT5_4, PIN_DIGIT5_8);
-	const uint8_t d4 = read_4bits(PIN_DIGIT4_1, PIN_DIGIT4_2, PIN_DIGIT4_4, PIN_DIGIT4_8);
-	const uint8_t d3 = read_4bits(PIN_DIGIT3_1, PIN_DIGIT3_2, PIN_DIGIT3_4, PIN_DIGIT3_8);
-	const uint8_t d2 = read_4bits(PIN_DIGIT2_1, PIN_DIGIT2_2, PIN_DIGIT2_4, PIN_DIGIT2_8);
-	const uint8_t d1 = read_4bits(PIN_DIGIT1_1, PIN_DIGIT1_2, PIN_DIGIT1_4, PIN_DIGIT1_8);
-	const uint8_t sign = read_3bits(PIN_SIGN_1, PIN_SIGN_2, PIN_SIGN_4);
+	const uint8_t d5 = READ_DIGIT(5);
+	const uint8_t d4 = READ_DIGIT(4);
+	const uint8_t d3 = READ_DIGIT(3);
+	const uint8_t d2 = READ_DIGIT(2);
+	const uint8_t d1 = READ_DIGIT(1);
+	const uint8_t sign = READ_3_BITS(PIN_SIGN_);
 
 	if (V7_28_CODE_SIGN_OVERFLOW == sign) {
     	result->type = SCPI_NUM_NUMBER;    // TODO
@@ -143,9 +184,12 @@ static void readNumber(scpi_number_t * result) {
 	}
 
 	result->value = res;
+
+#undef READ_DIGIT
 }
 
-static void valueIsReady() {
+// measurement is completed
+static void value_is_ready() {
     if (digitalRead(PIN_MAINTENANCE) || !digitalRead(PIN_MEAS_START)) {
         return;  // no valid data
     }
@@ -154,10 +198,12 @@ static void valueIsReady() {
 	SCPIMM_read_value(&num);
 }
 
+// set "remote control disabled" state
 static void set_disabled(bool_t disabled) {
     digitalWrite(PIN_DISABLE, disabled ? LOW : HIGH);
 }
 
+// configure in/out pins
 static void setupPins() {
 	Serial.begin(9600);
   
@@ -222,95 +268,55 @@ static void setupPins() {
 	pinMode(PIN_AUTOSTART, OUTPUT);
 	pinMode(PIN_DISABLE, OUTPUT);
 
-    attachInterrupt(INT_MEAS_START, valueIsReady, RISING);
+    attachInterrupt(INT_MEAS_START, value_is_ready, RISING);
 }
 
+// set "auto range" voltmeter state
 static void set_auto_range(const bool_t enabled) {
 	digitalWrite(PIN_AUTO_RANGE, enabled ? HIGH : LOW);
 }
 
+// check if given state(s) was/were initialized before
 static bool_t is_state_initialized(uint8_t bits) {
 	return bits == (v7_28_state.initialized & bits);
 }
 
+// mark state(s) as initialized
 static void set_state_initialized(uint8_t bits) {
 	v7_28_state.initialized |= bits;
 }
 
+// check if mode state was initialized before
 static bool_t is_mode_initialized(void) {
 	return is_state_initialized(V7_28_STATE_INITIALIZED_MODE);
 }
 
-static uint8_t get_dcv_range_code(size_t range_index) {
-	if (range <= 1.0e-1) {
-		return V7_28_RANGE_DCV_0;
-	}
-	if (range <= 1.0e0) {
-		return V7_28_RANGE_DCV_1;
-	}
-	if (range <= 1.0e1) {
-		return V7_28_RANGE_DCV_2;
-	}
-	if (range <= 1.0e2) {
-		return V7_28_RANGE_DCV_3;
-	}
-	return V7_28_RANGE_DCV_4;
-}
+// setup range pins
+static int16_t set_range(const scpimm_mode_t mode, size_t range_index) {
+#define	RANGE_CASE(func, var) \
+	case SCPIMM_MODE_ ## func:	\
+	if (sizeof(var ## _range_codes)/sizeof(var ## _range_codes[0]) <= range_index) {	\
+		return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;	\
+	}	\
+	code = var ## _range_codes[range_index];	\
+	break
 
-static uint8_t get_acv_range_code(size_t range_index) {
-	if (range <= 1.0e0) {
-		return V7_28_RANGE_ACV_0;
-	}
-	if (range <= 1.0e1) {
-		return V7_28_RANGE_ACV_1;
-	}
-	if (range <= 1.0e2) {
-		return V7_28_RANGE_ACV_2;
-	}
-	return V7_28_RANGE_ACV_3;
-}
-
-static uint8_t get_resistance_range_code(size_t range_index) {
-	if (range <= 1.0e-1) {
-		return V7_28_RANGE_RESISTANCE_0;
-	}
-	if (range <= 1.0e0) {
-		return V7_28_RANGE_RESISTANCE_1;
-	}
-	if (range <= 1.0e1) {
-		return V7_28_RANGE_RESISTANCE_2;
-	}
-	if (range <= 1.0e2) {
-		return V7_28_RANGE_RESISTANCE_3;
-	}
-	if (range <= 1.0e3) {
-		return V7_28_RANGE_RESISTANCE_4;
-	}
-	return V7_28_RANGE_RESISTANCE_5;
-}
-
-static void set_range(const scpimm_mode_t mode, size_t range_index) {
 	uint8_t code;
 
 	switch (mode) {
-	case SCPIMM_MODE_DCV:
-	case SCPIMM_MODE_DCV_RATIO:
-		code = get_dcv_range_code(range_index);
-		break;
-
-	case SCPIMM_MODE_ACV:
-		code = get_acv_range_code(range_index);
-		break;
-
-	case SCPIMM_MODE_RESISTANCE_2W:
-		code = get_resistance_range_code(range_index);
-		break;
+		RANGE_CASE(DCV, dcv);
+		RANGE_CASE(DCV_RATIO, dcv);
+		RANGE_CASE(ACV, acv);
+		RANGE_CASE(RESISTANCE_2W, resistance);
 
 	default:
-		return;
+		return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
 	}
 
-	write_4bits(PIN_RANGE_1, PIN_RANGE_2, PIN_RANGE_4, PIN_RANGE_8, code);
+	WRITE_4_BITS(PIN_RANGE_, code);
+	return SCPI_ERROR_OK;
+
+#undef	RANGE_CASE
 }
 
 /******************************************************************************
@@ -376,12 +382,12 @@ static int16_t set_mode(const scpimm_mode_t mode, const scpimm_mode_params_t* pa
     set_disabled(TRUE);
 
     if (change_mode) {
-    	write_5bits(PIN_MODE_1, PIN_MODE_2, PIN_MODE_4, PIN_MODE_8, PIN_MODE_16, mode_code);
+    	WRITE_5_BITS(PIN_MODE_, mode_code);
     }
 
 	if (params) {
-		set_range(mode, params->range);
-		v7_28_state.range = params->range;
+		set_range(mode, params->range_index);
+		v7_28_state.range_index = params->range_index;
 		set_state_initialized(V7_28_STATE_INITIALIZED_RANGE);
 
 		set_auto_range(params->auto_range);
@@ -397,7 +403,7 @@ static int16_t set_mode(const scpimm_mode_t mode, const scpimm_mode_params_t* pa
     if (change_mode) {
     	// wait until multimeter actually switches to given mode
 		while (n--) {
-			const uint8_t read_mode = read_4bits(PIN_READ_MODE_1, PIN_READ_MODE_2, PIN_READ_MODE_4, PIN_READ_MODE_8);
+			const uint8_t read_mode = READ_4_BITS(PIN_READ_MODE_);
 			if (read_mode == expected) {
 				v7_28_state.mode = mode;
 				set_state_initialized(V7_28_STATE_INITIALIZED_MODE);
@@ -432,36 +438,31 @@ static int16_t get_mode(scpimm_mode_t* mode, scpimm_mode_params_t* params) {
 		if (!is_state_initialized(V7_28_STATE_INITIALIZED_RANGE)) {
 			return V7_28_ERROR_RANGE_NOT_INITIALIZED;
 		}
-		params->range = v7_28_state.range;
-		params->resolution = V7_28_RESOLUTION;
+		params->range_index = v7_28_state.range_index;
+		params->resolution_index = 0;
 	}
 
 	return SCPI_ERROR_OK;
 }
 
 static int16_t get_allowed_ranges(scpimm_mode_t mode, const double** const ranges, const double** const overruns) {
+#define	RANGE_CASE(func, var)	\
+	case SCPIMM_MODE_ ## func:	\
+		ranges_src = var ## _ranges;	\
+		overruns_src = var ## _overruns;	\
+		break
+
 	const double *ranges_src, *overruns_src;
 
 	switch (mode) {
-		case SCPIMM_MODE_DCV:
-		case SCPIMM_MODE_DCV_RATIO:
-			ranges_src = dcv_ranges;
-			overruns_src = dcv_overruns;
-			break;
-
-		case SCPIMM_MODE_ACV:
-			ranges_src = acv_ranges;
-			overruns_src = acv_overruns;
-			break;
-
-		case SCPIMM_MODE_RESISTANCE_2W:
-			ranges_src = resistance_ranges;
-			overruns_src = resistance_overruns;
-			break;
+		RANGE_CASE(DCV, dcv);
+		RANGE_CASE(DCV_RATIO, dcv);
+		RANGE_CASE(ACV, acv);
+		RANGE_CASE(RESISTANCE_2W, resistance);
 
 		default:
 			// mode is not supported
-			return V7_28_ERROR_INVALID_MODE;
+			return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
 	}
 
 	if (ranges) {
@@ -473,60 +474,39 @@ static int16_t get_allowed_ranges(scpimm_mode_t mode, const double** const range
 	}
 
 	return SCPI_ERROR_OK;
+
+#undef	RANGE_CASE
 }
 
-static int16_t get_possible_range(const scpimm_mode_t mode, double* const min_range, double* const max_range) {
-	double min_value, max_value;
+static int16_t get_allowed_resolutions(scpimm_mode_t mode, size_t range_index, const double** resolutions) {
+#define	RANGE_CASE(func, var)	\
+	case SCPIMM_MODE_ ## func:	\
+		if (sizeof(var ## _resolutions) / sizeof(var ## _resolutions[0]) <= range_index) {	\
+			return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;	\
+		}	\
+		resolutions_src = var ## _resolutions[range_index];	\
+		break
+
+	const double *resolutions_src;
 
 	switch (mode) {
-	case SCPIMM_MODE_DCV:
-	case SCPIMM_MODE_DCV_RATIO:
-		min_value = 0.1;
-		max_value = 1000.0;
-		break;
+		RANGE_CASE(DCV, dcv);
+		RANGE_CASE(DCV_RATIO, dcv);
+		RANGE_CASE(ACV, acv);
+		RANGE_CASE(RESISTANCE_2W, resistance);
 
-	case SCPIMM_MODE_ACV:
-		min_value = 1.0;
-		max_value = 1000.0;
-		break;
-
-	case SCPIMM_MODE_RESISTANCE_2W:
-		min_value = 0.1;
-		max_value = 10000.0;
-		break;
-
-	default:
-		return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
+		default:
+			// mode is not supported
+			return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
 	}
 
-	if (min_range) {
-		*min_range = min_value;
-	}
-
-	if (max_range) {
-		*max_range = max_value;
+	if (resolutions) {
+		*resolutions = resolutions_src;
 	}
 
 	return SCPI_ERROR_OK;
-}
 
-static int16_t get_possible_resolution(const scpimm_mode_t /* mode */, const double range, double* const min_resolution, double* const max_resolution) {
-
-	/*
-	 * always return the same resolution which is 1.0e-6 of given range
-	 * actual resolution is 10 times worse, we're just trying emulate HP 34401A
-	 */
-	const double resolution = range * 1.0e-6;
-
-	if (min_resolution) {
-		*min_resolution = V7_28_RESOLUTION;
-	}
-
-	if (max_resolution) {
-		*max_resolution = V7_28_RESOLUTION;
-	}
-
-	return SCPI_ERROR_OK;
+#undef	RANGE_CASE
 }
 
 static int16_t start_measure() {
@@ -573,4 +553,3 @@ void loop() {
 		SCPIMM_parseInBuffer(&p, 1);
 	}
 }
-

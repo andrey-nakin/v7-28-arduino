@@ -24,6 +24,8 @@ static int16_t get_allowed_ranges(scpimm_mode_t mode, const double** const range
 static int16_t get_allowed_resolutions(scpimm_mode_t mode, size_t range_index, const double** resolutions);
 static int16_t start_measure();
 static size_t send(const uint8_t* data, size_t len);
+static size_t get_milliseconds(unsigned long* const tm);
+static size_t sleep_milliseconds(const unsigned ms);
 static void set_remote(bool_t remote, bool_t lock);
 static const char* get_error_description(int16_t error);
 
@@ -40,6 +42,8 @@ static scpimm_interface_t scpimm_interface = {
 	get_allowed_resolutions,
 	start_measure,
 	send,
+	get_milliseconds,
+	sleep_milliseconds,
 	set_remote,
 	NULL,
 	NULL,
@@ -518,6 +522,18 @@ static int16_t start_measure() {
 
 static size_t send(const uint8_t* data, const size_t len) {
 	return Serial.write(data, len);
+}
+
+static size_t get_milliseconds(unsigned long* const tm) {
+	if (tm) {
+		*tm = millis();
+	}
+	return SCPI_ERROR_OK;
+}
+
+static size_t sleep_milliseconds(const unsigned ms) {
+	delay(ms);
+	return SCPI_ERROR_OK;
 }
 
 static void set_remote(bool_t remote, bool_t lock) {

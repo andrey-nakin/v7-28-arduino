@@ -576,7 +576,11 @@ void setup() {
 
 void loop() {
 	if (Serial.available() > 0) {
+		// data arrived from serial port
 		const char p = Serial.read();
 		SCPIMM_parseInBuffer(&p, 1);
+	} else {
+		// no data from serial port, run background routines
+		SCPIMM_yield();
 	}
 }

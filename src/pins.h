@@ -113,6 +113,7 @@
 #define PIN_DISABLE	16
 
 #define INT_MEAS_START  1
+#define INT_EXT_TRIGGER  5
 
 #endif	//	__PINS_H_V7_28_ARDUINO
 

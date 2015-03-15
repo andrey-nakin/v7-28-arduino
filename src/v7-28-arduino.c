@@ -204,6 +204,11 @@ static void value_is_ready() {
 	SCPIMM_read_value(&num);
 }
 
+// external trigger
+static void external_trigger() {
+	SCPIMM_external_trigger();
+}
+
 // set "remote control disabled" state
 static void set_disabled(bool_t disabled) {
     digitalWrite(PIN_DISABLE, disabled ? LOW : HIGH);
@@ -275,6 +280,7 @@ static void setupPins() {
 	pinMode(PIN_DISABLE, OUTPUT);
 
     attachInterrupt(INT_MEAS_START, value_is_ready, RISING);
+    attachInterrupt(INT_EXT_TRIGGER, external_trigger, RISING);
 }
 
 // set "auto range" voltmeter state

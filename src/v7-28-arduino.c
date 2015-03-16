@@ -16,7 +16,6 @@
   Forward declarations
 ******************************************************************************/
 
-static scpimm_mode_t supported_modes();
 static int16_t reset();
 static int16_t set_mode(const scpimm_mode_t mode, const scpimm_mode_params_t* params);
 static int16_t get_mode(scpimm_mode_t* mode, scpimm_mode_params_t* params);
@@ -27,15 +26,13 @@ static size_t send(const uint8_t* data, size_t len);
 static int16_t get_milliseconds(uint32_t* tm);
 static int16_t sleep_milliseconds(uint32_t ms);
 static int16_t set_interrupt_status(bool_t disabled);
-static void set_remote(bool_t remote, bool_t lock);
-static const char* get_error_description(int16_t error);
+static int16_t set_remote(bool_t remote, bool_t lock);
 
 /******************************************************************************
   Global constants
 ******************************************************************************/
 
 static scpimm_interface_t scpimm_interface = {
-	supported_modes,
 	reset,
 	set_mode,
 	get_mode,
@@ -49,8 +46,7 @@ static scpimm_interface_t scpimm_interface = {
 	set_remote,
 	NULL,
 	NULL,
-	NULL,
-	get_error_description
+	NULL
 };
 
 #define	TERMINATOR	-1.0
@@ -335,11 +331,6 @@ static int16_t set_range(const scpimm_mode_t mode, size_t range_index) {
   Multimeter interface implementation
 ******************************************************************************/
 
-static scpimm_mode_t supported_modes() {
-	return SCPIMM_MODE_DCV | SCPIMM_MODE_DCV_RATIO | SCPIMM_MODE_ACV
-		| SCPIMM_MODE_RESISTANCE_2W;
-}
-
 static int16_t reset() {
 	set_disabled(TRUE);
 	set_auto_range(TRUE);	//  enable autorange
@@ -386,7 +377,7 @@ static int16_t set_mode(const scpimm_mode_t mode, const scpimm_mode_params_t* pa
 
 			default:
 				// mode is not supported
-				return V7_28_ERROR_INVALID_MODE;
+				return SCPI_ERROR_UNDEFINED_HEADER;
 		}
 	}
 
@@ -553,20 +544,10 @@ static int16_t set_interrupt_status(const bool_t disabled) {
 	return SCPI_ERROR_OK;
 }
 
-static void set_remote(bool_t remote, bool_t lock) {
+static int16_t set_remote(bool_t remote, bool_t lock) {
 	(void) lock;
 	digitalWrite(PIN_REMOTE, remote ? LOW : HIGH);
-}
-
-static const char* get_error_description(int16_t error) {
-	switch (error) {
-		case V7_28_ERROR_INVALID_MODE:
-			return "Invalid mode";
-		case V7_28_ERROR_SET_MODE:
-			return "Cannot set mode";
-	}
-
-	return NULL;
+	return SCPI_ERROR_OK;
 }
 
 /******************************************************************************
@@ -584,7 +565,7 @@ void loop() {
 	if (Serial.available() > 0) {
 		// data arrived from serial port
 		const char p = Serial.read();
-		SCPIMM_parseInBuffer(&p, 1);
+		SCPIMM_parse_in_buffer(&p, 1);
 	} else {
 		// no data from serial port, run background routines
 		SCPIMM_yield();

@@ -280,7 +280,7 @@ static void setupPins() {
 	pinMode(PIN_DISABLE, OUTPUT);
 
     attachInterrupt(INT_MEAS_START, value_is_ready, RISING);
-    attachInterrupt(INT_EXT_TRIGGER, external_trigger, RISING);
+    attachInterrupt(INT_EXT_TRIGGER, external_trigger, FALLING);
 }
 
 // set "auto range" voltmeter state

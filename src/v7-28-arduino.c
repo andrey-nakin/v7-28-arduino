@@ -156,7 +156,7 @@ static void readNumber(scpi_number_t * result) {
 	const uint8_t sign = READ_3_BITS(PIN_SIGN_);
 
 	if (V7_28_CODE_SIGN_OVERFLOW == sign) {
-    	result->type = SCPI_NUM_NUMBER;    // TODO
+    	result->type = SCPI_NUM_INF;
 		return;
 	}
 
@@ -273,6 +273,7 @@ static void setupPins() {
 	pinMode(PIN_START, OUTPUT);
 	pinMode(PIN_REMOTE, OUTPUT);
 	pinMode(PIN_AUTOSTART, OUTPUT);
+	pinMode(PIN_AUTO_RANGE, OUTPUT);
 	pinMode(PIN_DISABLE, OUTPUT);
 
     attachInterrupt(INT_MEAS_START, value_is_ready, RISING);

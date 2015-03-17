@@ -1,0 +1,1 @@
+"C:/Program Files/Arduino/hardware/tools/avr/bin/avrdude" "-CC:/Program Files/Arduino/hardware/tools/avr/etc/avrdude.conf" -v -v -v -v -patmega2560 -cwiring -P\\.\COM22 -b115200 -D -Uflash:w:v7-28-arduino.hex:i

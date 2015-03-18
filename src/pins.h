@@ -1,6 +1,9 @@
 #ifndef __PINS_H_V7_28_ARDUINO
 #define	__PINS_H_V7_28_ARDUINO
 
+/* Beeper pin */
+#define PIN_BEEP	13
+
 /* DPD Jack, Я pin */
 #define PIN_DIGIT1_1	53
 /* DPD Jack, Ю pin */

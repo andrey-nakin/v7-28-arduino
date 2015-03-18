@@ -27,6 +27,7 @@ static int16_t get_milliseconds(uint32_t* tm);
 static int16_t sleep_milliseconds(uint32_t ms);
 static int16_t set_interrupt_status(bool_t disabled);
 static int16_t set_remote(bool_t remote, bool_t lock);
+static int16_t beep();
 
 /******************************************************************************
   Global constants
@@ -44,7 +45,7 @@ static scpimm_interface_t scpimm_interface = {
 	sleep_milliseconds,
 	set_interrupt_status,
 	set_remote,
-	NULL,
+	beep,
 	NULL,
 	NULL
 };
@@ -548,6 +549,11 @@ static int16_t set_interrupt_status(const bool_t disabled) {
 static int16_t set_remote(bool_t remote, bool_t lock) {
 	(void) lock;
 	digitalWrite(PIN_REMOTE, remote ? LOW : HIGH);
+	return SCPI_ERROR_OK;
+}
+
+static int16_t beep() {
+	tone(PIN_BEEP, 500, 500);	//	500 Hz 500 ms
 	return SCPI_ERROR_OK;
 }
 

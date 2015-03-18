@@ -81,6 +81,8 @@ HardwareSerial.cpp.o:	$(ARDUINO_CORE_SRC_DIR)/HardwareSerial.cpp
 	avr-g++ -c $(CFLAGS) $(ARDUINO_INCLUDES) $(ARDUINO_CORE_SRC_DIR)/HardwareSerial.cpp -o HardwareSerial.cpp.o
 Print.cpp.o:	$(ARDUINO_CORE_SRC_DIR)/Print.cpp
 	avr-g++ -c $(CFLAGS) $(ARDUINO_INCLUDES) $(ARDUINO_CORE_SRC_DIR)/Print.cpp -o Print.cpp.o
+Tone.cpp.o:	$(ARDUINO_CORE_SRC_DIR)/Tone.cpp
+	avr-g++ -c $(CFLAGS) $(ARDUINO_INCLUDES) $(ARDUINO_CORE_SRC_DIR)/Tone.cpp -o Tone.cpp.o
 
 wiring.c.o:	$(ARDUINO_CORE_SRC_DIR)/wiring.c
 	avr-gcc -c $(CFLAGS) $(ARDUINO_INCLUDES) $(ARDUINO_CORE_SRC_DIR)/wiring.c -o wiring.c.o
@@ -89,11 +91,12 @@ wiring_digital.c.o:		$(ARDUINO_CORE_SRC_DIR)/wiring_digital.c
 WInterrupts.c.o:		$(ARDUINO_CORE_SRC_DIR)/WInterrupts.c
 	avr-gcc -c $(CFLAGS) $(ARDUINO_INCLUDES) $(ARDUINO_CORE_SRC_DIR)/WInterrupts.c -o WInterrupts.c.o
 
-core.a: main.cpp.o Stream.cpp.o HardwareSerial.cpp.o Print.cpp.o wiring.c.o wiring_digital.c.o WInterrupts.c.o
+core.a: main.cpp.o Stream.cpp.o HardwareSerial.cpp.o Print.cpp.o Tone.cpp.o wiring.c.o wiring_digital.c.o WInterrupts.c.o
 	avr-ar rcs core.a main.cpp.o
 	avr-ar rcs core.a Stream.cpp.o
 	avr-ar rcs core.a HardwareSerial.cpp.o
 	avr-ar rcs core.a Print.cpp.o
+	avr-ar rcs core.a Tone.cpp.o
 	avr-ar rcs core.a wiring.c.o
 	avr-ar rcs core.a wiring_digital.c.o
 	avr-ar rcs core.a WInterrupts.c.o

@@ -16,7 +16,7 @@
   Forward declarations
 ******************************************************************************/
 
-static int16_t reset();
+static int16_t setup_voltmeter();
 static int16_t set_mode(const scpimm_mode_t mode, const scpimm_mode_params_t* params);
 static int16_t get_mode(scpimm_mode_t* mode, scpimm_mode_params_t* params);
 static int16_t get_allowed_ranges(scpimm_mode_t mode, const double** const ranges, const double** const overruns);
@@ -26,6 +26,7 @@ static size_t send(const uint8_t* data, size_t len);
 static int16_t get_milliseconds(uint32_t* tm);
 static int16_t sleep_milliseconds(uint32_t ms);
 static int16_t set_interrupt_status(bool_t disabled);
+static int16_t reset();
 static int16_t set_remote(bool_t remote, bool_t lock);
 static int16_t beep();
 
@@ -34,7 +35,7 @@ static int16_t beep();
 ******************************************************************************/
 
 static scpimm_interface_t scpimm_interface = {
-	reset,
+	setup_voltmeter,
 	set_mode,
 	get_mode,
 	get_allowed_ranges,
@@ -44,6 +45,7 @@ static scpimm_interface_t scpimm_interface = {
 	get_milliseconds,
 	sleep_milliseconds,
 	set_interrupt_status,
+	reset,
 	set_remote,
 	beep,
 	NULL,
@@ -333,15 +335,9 @@ static int16_t set_range(const scpimm_mode_t mode, size_t range_index) {
   Multimeter interface implementation
 ******************************************************************************/
 
-static int16_t reset() {
-	set_disabled(TRUE);
-	set_auto_range(TRUE);	//  enable autorange
-
-    digitalWrite(PIN_REMOTE, LOW);  //  enable remote mode
-    digitalWrite(PIN_AUTOSTART, LOW);   //  disable autostart
-    digitalWrite(PIN_START, LOW);
-
-	set_disabled(FALSE);
+static int16_t setup_voltmeter() {
+	Serial.begin(BAUD_RATE);
+	setupPins();
 
 	return SCPI_ERROR_OK;
 }
@@ -546,6 +542,19 @@ static int16_t set_interrupt_status(const bool_t disabled) {
 	return SCPI_ERROR_OK;
 }
 
+static int16_t reset() {
+	set_disabled(TRUE);
+	set_auto_range(TRUE);	//  enable autorange
+
+    digitalWrite(PIN_REMOTE, LOW);  //  enable remote mode
+    digitalWrite(PIN_AUTOSTART, LOW);   //  disable autostart
+    digitalWrite(PIN_START, LOW);
+
+	set_disabled(FALSE);
+
+	return SCPI_ERROR_OK;
+}
+
 static int16_t set_remote(bool_t remote, bool_t lock) {
 	(void) lock;
 	digitalWrite(PIN_REMOTE, remote ? LOW : HIGH);
@@ -562,9 +571,6 @@ static int16_t beep() {
 ******************************************************************************/
 
 void setup() {
-	Serial.begin(BAUD_RATE);
-	setupPins();
-
 	SCPIMM_setup(&scpimm_interface);
 }
 

@@ -29,7 +29,7 @@ LIBSCPIMM_SRCS = $(addprefix $(LIBSCPIMM_SRC_DIR)/, scpimm.c configure.c display
 LIBSCPIMM_HEADERS = $(addprefix $(LIBSCPIMM_INCLUDE_DIR)/, scpimm.h)
 LIBSCPIMM_OBJS = $(addprefix $(LIBSCPIMM_OBJ_DIR)/, $(notdir $(LIBSCPIMM_SRCS:.c=.o)))
 
-CFLAGS += -g -Os -Wall -fno-exceptions -ffunction-sections -fdata-sections -mmcu=$(ARDUINO_CHIP) -DF_CPU=16000000L -MMD -DUSB_VID=null -DUSB_PID=null -DARDUINO=$(ARDUINO_DEF) -DSCPIMM_NO_CURRENT_DC -DSCPIMM_NO_CURRENT_AC -DSCPIMM_NO_FRESISTANCE -DSCPIMM_NO_CONTINUITY -DSCPIMM_NO_DIODE -DSCPIMM_NO_FREQUENCY -DSCPIMM_NO_PERIOD
+CFLAGS += -g -Os -Wall -fno-exceptions -ffunction-sections -fdata-sections -mmcu=$(ARDUINO_CHIP) -DF_CPU=16000000L -MMD -DUSB_VID=null -DUSB_PID=null -DARDUINO=$(ARDUINO_DEF) -DSCPIMM_NO_CURRENT_DC -DSCPIMM_NO_CURRENT_AC -DSCPIMM_NO_FRESISTANCE
 
 ##############################################################################
 # Basic targets

@@ -25,9 +25,9 @@ static int16_t start_measure();
 static size_t send(const uint8_t* data, size_t len);
 static int16_t get_milliseconds(uint32_t* tm);
 static int16_t sleep_milliseconds(uint32_t ms);
-static int16_t set_interrupt_status(bool_t disabled);
+static int16_t set_interrupt_status(scpi_bool_t disabled);
 static int16_t reset();
-static int16_t set_remote(bool_t remote, bool_t lock);
+static int16_t set_remote(scpi_bool_t remote, scpi_bool_t lock);
 static int16_t beep();
 
 /******************************************************************************
@@ -95,7 +95,7 @@ static struct {
 	uint8_t initialized;
 	scpimm_mode_t mode;
 	size_t	range_index;
-	bool_t auto_range;
+	scpi_bool_t auto_range;
 } v7_28_state;
 
 /******************************************************************************
@@ -209,7 +209,7 @@ static void external_trigger() {
 }
 
 // set "remote control disabled" state
-static void set_disabled(bool_t disabled) {
+static void set_disabled(scpi_bool_t disabled) {
     digitalWrite(PIN_DISABLE, disabled ? LOW : HIGH);
 }
 
@@ -284,12 +284,12 @@ static void setupPins() {
 }
 
 // set "auto range" voltmeter state
-static void set_auto_range(const bool_t enabled) {
+static void set_auto_range(const scpi_bool_t enabled) {
 	digitalWrite(PIN_AUTO_RANGE, enabled ? HIGH : LOW);
 }
 
 // check if given state(s) was/were initialized before
-static bool_t is_state_initialized(uint8_t bits) {
+static scpi_bool_t is_state_initialized(uint8_t bits) {
 	return bits == (v7_28_state.initialized & bits);
 }
 
@@ -299,7 +299,7 @@ static void set_state_initialized(uint8_t bits) {
 }
 
 // check if mode state was initialized before
-static bool_t is_mode_initialized(void) {
+static scpi_bool_t is_mode_initialized(void) {
 	return is_state_initialized(V7_28_STATE_INITIALIZED_MODE);
 }
 
@@ -343,7 +343,7 @@ static int16_t setup_voltmeter() {
 }
 
 static int16_t set_mode(const scpimm_mode_t mode, const scpimm_mode_params_t* params) {
-	bool_t change_mode = TRUE;
+	scpi_bool_t change_mode = TRUE;
 	uint8_t mode_code, expected;
 	int n = V7_28_SET_MODE_MAX_STEPS;
 
@@ -533,7 +533,7 @@ static int16_t sleep_milliseconds(const uint32_t ms) {
 	return SCPI_ERROR_OK;
 }
 
-static int16_t set_interrupt_status(const bool_t disabled) {
+static int16_t set_interrupt_status(const scpi_bool_t disabled) {
 	if (disabled) {
 		noInterrupts();
 	} else {
@@ -555,7 +555,7 @@ static int16_t reset() {
 	return SCPI_ERROR_OK;
 }
 
-static int16_t set_remote(bool_t remote, bool_t lock) {
+static int16_t set_remote(scpi_bool_t remote, scpi_bool_t lock) {
 	(void) lock;
 	digitalWrite(PIN_REMOTE, remote ? LOW : HIGH);
 	return SCPI_ERROR_OK;

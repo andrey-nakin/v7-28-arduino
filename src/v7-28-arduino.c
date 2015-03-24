@@ -26,6 +26,7 @@ static size_t send(const uint8_t* data, size_t len);
 static int16_t get_milliseconds(uint32_t* tm);
 static int16_t sleep_milliseconds(uint32_t ms);
 static int16_t set_interrupt_status(scpi_bool_t disabled);
+static int16_t set_global_bool_option(const scpimm_option_t option, const scpi_bool_t value);
 static int16_t reset();
 static int16_t set_remote(scpi_bool_t remote, scpi_bool_t lock);
 static int16_t beep();
@@ -45,6 +46,7 @@ static scpimm_interface_t scpimm_interface = {
 	get_milliseconds,
 	sleep_milliseconds,
 	set_interrupt_status,
+	set_global_bool_option,
 	reset,
 	set_remote,
 	beep,
@@ -540,6 +542,20 @@ static int16_t set_interrupt_status(const scpi_bool_t disabled) {
 		interrupts();
 	}
 	return SCPI_ERROR_OK;
+}
+
+static int16_t set_global_bool_option(const scpimm_option_t option, const scpi_bool_t value) {
+	int16_t result = SCPI_ERROR_OK;
+
+	switch (option) {
+	case SCPIMM_OPTION_INPUT_IMPEDANCE_AUTO:
+		// voltmeter does not support remote control of input impedance
+		// but we do not return error for compatibility with Agilent 34401A
+		(void) value;	//	suppress warning
+		break;
+	}
+
+	return result;
 }
 
 static int16_t reset() {

@@ -4,6 +4,8 @@
 #include "consts.h"
 #include "pins.h"
 
+
+
 #define STATIC_ASSERT(COND, MSG) typedef char static_assertion_##MSG[(COND) ? 1 : -1]
 #define P99_PROTECT(...) __VA_ARGS__
 #define FOR_4(expr) expr ## 0, expr ## 1, expr ## 2, expr ## 3
@@ -30,6 +32,7 @@ static int16_t set_global_bool_option(const scpimm_option_t option, const scpi_b
 static int16_t reset();
 static int16_t set_remote(scpi_bool_t remote, scpi_bool_t lock);
 static int16_t beep();
+static const char* get_idn();
 
 /******************************************************************************
   Global constants
@@ -51,7 +54,8 @@ static scpimm_interface_t scpimm_interface = {
 	set_remote,
 	beep,
 	NULL,
-	NULL
+	NULL,
+	get_idn
 };
 
 #define	TERMINATOR	-1.0
@@ -580,6 +584,10 @@ static int16_t set_remote(scpi_bool_t remote, scpi_bool_t lock) {
 static int16_t beep() {
 	tone(PIN_BEEP, 500, 500);	//	500 Hz 500 ms
 	return SCPI_ERROR_OK;
+}
+
+static const char* get_idn() {
+	return V7_28_IDN;
 }
 
 /******************************************************************************

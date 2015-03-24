@@ -1,6 +1,16 @@
 #ifndef __CONSTS_H_V7_28_ARDUINO
 #define	__CONSTS_H_V7_28_ARDUINO
 
+#ifndef V7_28_REVISION_NO
+#define V7_28_REVISION_NO "1"
+#endif
+
+#ifndef V7_28_REVISION_DATE
+#define V7_28_REVISION_DATE __DATE__
+#endif
+
+#define V7_28_IDN ( "V7-28," V7_28_REVISION_NO "," V7_28_REVISION_DATE )
+
 /* DPD pins 7, Ж, Е */
 #define V7_28_CODE_SIGN_NON_POLAR 0
 #define V7_28_CODE_SIGN_OVERFLOW 2

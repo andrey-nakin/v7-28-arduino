@@ -1,4 +1,4 @@
-\documentclass[10pt, a4paper, twocolumn]{article}
+\documentclass[12pt, a4paper]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[russian]{babel}
 \usepackage{hyperref}
@@ -31,6 +31,8 @@
 
 \V{} имеет возможность дистанционного управления и снятия показаний, что позволяет его использовать в автоматизированных измерительных установках. Но для управления требуется физически задавать и считывать логические сигналы на разъёмах вольтметра. Разумеется, в самом вольтметре не реализован какой-либо язык управления. В настоящее время для работы с ним как правило используются аппаратно-программные решения на базе КАМАК.
 
+Использование данной прошивки позволяет с минимальными усилиями использовать \V{} (и совместимые с ним по интерфейсу) в современных автоматизированных измерительных установках.
+
 \subsection{Необходимость данной работы}
 
 Для простоты использования какого-либо устройства в современных измерительных установках требуется наличие у него современных стандартных аппаратного и программного интерфейсов.
@@ -45,7 +47,244 @@
 
 \Arduino{} представляет собой плату микроконтроллера с установленным микропроцессором, программируемой памятью, множеством цифровых портов ввода-вывода и USB-разъёмом. Из всего семейства микроконтроллеров Arduino только Mega обладает числом портов достаточным для полноценного управления \V. Микроконтроллер подключается к компьютеру при помощи USB, а к вольтметру при помощи шлейфа, который легко изготовить самостоятельно.  В память микроконтроллера прошита программа, принимающая команды от компьютера на языке \SCPI{} и переводящая их в управляющие сигналы для \V.
 
-\Arduino{} является готовым устройством, что удобно для конечного пользователя, не имеющего возможности самостоятельно распаивать платы микроконтроллеров. Он широко распространён, его легко приобрести, по нему доступна обширная документация. Наряду с <<оригинальным>> микроконтроллером, выходящим под торговой маркой Arduino, доступно множество более дешёвых аналогов, которые полностью совместимы с \Arduino{} при в несколько раз меньшей цене.
+\Arduino{} является готовым устройством, что удобно для конечного пользователя, не имеющего возможности самостоятельно проектировать и производить платы микроконтроллеров. Он широко распространён, его легко приобрести, по нему доступна обширная документация. Наряду с <<оригинальным>> микроконтроллером, выходящим под торговой маркой Arduino, доступно множество более дешёвых аналогов, которые полностью совместимы с \Arduino{} при в несколько раз меньшей цене.
+
+\section{Общее описание прошивки и реализуемого с её помощью мультиметра}
+
+\subsection{Зуммер}
+
+Типичный SCPI-мультиметр способен издавать звук зуммера при возникновении нештатной ситуации, обнаружении ошибки или по команде от ПК.
+
+Данная версия прошивки реализует зуммер на пине №~13. Для проигрывания необходимо подключить к {\Arduino} звукоизлучатель, например пьезоэлектрический.
+
+Зуммер проигрывается при обнаружении ошибки в SCPI-командах, а также по команде {\tt SYSTem:BEEPer}.
+
+\subsection{Внешний аппаратный триггер}
+
+Данная версия прошивки позволяет использование внешнего аппаратного триггера для начала измерения. Внешний триггер включается командой {\tt TRIGger:SOURce EXTernal}.
+
+Внешний триггер подключается к пину №~18, что соответствует сигналу прерывания №~5. Сигналом для начала измерений является падение уровня сигнала с логической единицы до логического нуля. 
+
+В случае, когда мультиметр не настроен на использование внешнего триггера, его сигналы игнорируются.
+
+\subsection{Автоматический сброс {\Arduino} и необходимые изменения в программе измерительной установки}
+
+Микроконтроллер {\Arduino} реализован таким образом, что при открытии последовательного порта происходит сброс микроконтроллера. При этом в течении примерно 1~секунды микроконтроллер находится в состоянии ожидания --- это необходимо в целях прошивки микропрограмм. Только после этого, спустя небольшое время, требуемое инициализации микропрограммы, мультиметр готов к работе.
+
+С точки зрения пользователя это проявляется в том, что после открытия последовательного порта мультметр в течении примерно 1~секунды не реагирует на команды. Иногда это может приводить с сбою управляющей программы измерительной установки.
+
+Обеспечить работоспособность можно следующими способами.
+
+\begin{enumerate}
+
+\item Если имеется возможность модифицировать программу измерительной установки, то рекомендуется сразу по открытии последовательного порта выдержать секундную паузу.
+
+\item Если программа позволяет настраивать время таймаута ответа мультиметра, то увеличьте значение таймаута до 2 секунд, чтобы гарантированно <<дождаться>> ответа.
+
+\item Наконец, можно аппаратно модифицировать {\Arduino}, чтобы отключить автоматический сброс при открытии последовательного порта. В этом случае сброс микроконтроллера будет происходить только при потере питания, то есть при отключении от ПК.
+
+См. документацию к {\Arduino}, где рассмотрены способы отключения автоматического сброса.
+
+\end{enumerate}
+
+
+\section{Система SCPI команд}
+
+В данном разделе приведены все \SCPI{} команды, реализованные в прошивке. Порядок изложения --- алфавитный с разбивкой на подсистемы. Команда может сопровождаться комментарием, описывающим особенности реализации.
+
+Данная прошивка реализует ограниченное множество \SCPI{} команд мультиметра Hewlett-Packard (ныне~--- Agilent) \mbox{34401A}. Микроконтроллер подключается к ПЭВМ посредством USB соединения и эмулирует последовательный порт. Таким образом, связка <<микроконтроллер --- вольтметр>> со стороны ПЭВМ выглядит как мультиметр \mbox{34401A}, и может использоваться в измерительных программах без модификации программного кода, хотя и с учётом ограничений \V (по скорости работы, точности и пр.).
+
+Команды, отсутствующие в данном списке, не реализованы. При получении нереализованной или неизвестной команды генерируется ошибка \CMD{-113} <<Undefined header>>.
+
+\subsection{Все команды}
+
+\begin{verbatim}
+*CLS
+*ESE <enable value>
+*ESE?
+*ESR?
+*OPC
+*OPC?
+*PSC {0|1}
+*PSC?
+*SRE <enable value>
+*SRE?
+*STB?
+*RST
+*TST?
+*IDN?
+
+INITiate
+FETCh?
+READ?
+
+CONFigure
+  :VOLTage[:DC] {<range>|MIN|MAX|DEF|AUTO},{<resolution>|MIN|MAX|DEF}
+  :VOLTage:DC:RATio {<range>|MIN|MAX|DEF|AUTO},{<resolution>|MIN|MAX|DEF}
+  :VOLTage:AC {<range>|MIN|MAX|DEF|AUTO},{<resolution>|MIN|MAX|DEF}
+  :RESistance {<range>|MIN|MAX|DEF|AUTO},{<resolution>|MIN|MAX|DEF}
+CONFigure?
+
+DATA:POINts?
+
+DISPlay {OFF|ON }
+DISPlay?
+DISPlay
+  :TEXT <quoted string>
+  :TEXT?
+  :TEXT:CLEar
+
+INPut
+  :IMPedance:AUTO {OFF|ON}
+  :IMPedance:AUTO?
+  
+MEASure
+  :VOLTage[:DC]? {<range>|MIN|MAX|DEF|AUTO},{<resolution>|MIN|MAX|DEF}
+  :VOLTage:DC:RATio? {<range>|MIN|MAX|DEF|AUTO},{<resolution>|MIN|MAX|DEF}
+  :VOLTage:AC? {<range>|MIN|MAX|DEF|AUTO},{<resolution>|MIN|MAX|DEF}
+  :RESistance? {<range>|MIN|MAX|DEF|AUTO},{<resolution>|MIN|MAX|DEF}
+
+ROUTe:TERMinals?
+
+SAMPle
+  :COUNt {<value>|MINimum|MAXimum}
+  :COUNt? [MINimum|MAXimum]
+
+[SENSe:]
+  FUNCtion "VOLTage[:DC]"
+  FUNCtion "VOLTage:DC:RATio"
+  FUNCtion "VOLTage:AC"
+  FUNCtion "RESistance"
+  FUNCtion?
+[SENSe:]
+  VOLTage[:DC]:RANGe {<range>|MINimum|MAXimum}
+  VOLTage[:DC]:RANGe? [MINimum|MAXimum]
+  VOLTage:AC:RANGe {<range>|MINimum|MAXimum}
+  VOLTage:AC:RANGe? [MINimum|MAXimum]
+  RESistance:RANGe {<range>|MINimum|MAXimum}
+  RESistance:RANGe? [MINimum|MAXimum]
+[SENSe:]
+  VOLTage[:DC]:RANGe:AUTO {OFF|ON }
+  VOLTage[:DC]:RANGe:AUTO?
+  VOLTage:AC:RANGe:AUTO {OFF|ON }
+  VOLTage:AC:RANGe:AUTO?
+  RESistance:RANGe:AUTO {OFF|ON }
+  RESistance:RANGe:AUTO?
+[SENSe:]
+  VOLTage[:DC]:RESolution {<resolution>|MINimum|MAXimum}
+  VOLTage[:DC]:RESolution? [MINimum|MAXimum]
+  VOLTage:AC:RESolution {<resolution>|MINimum|MAXimum}
+  VOLTage:AC:RESolution? [MINimum|MAXimum]
+  RESistance:RESolution {<resolution>|MINimum|MAXimum}
+  RESistance:RESolution? [MINimum|MAXimum]
+[SENSe:]
+  VOLTage[:DC]:NPLCycles {0.02|0.2|1|10|100|MINimum|MAXimum}
+  VOLTage[:DC]:NPLCycles? [MINimum|MAXimum]
+  RESistance:NPLCycles {0.02|0.2|1|10|100|MINimum|MAXimum}
+  RESistance:NPLCycles? [MINimum|MAXimum]
+[SENSe:]
+  DETector:BANDwidth {3|20|200|MINimum|MAXimum}
+  DETector:BANDwidth? [MINimum|MAXimum]
+[SENSe:]
+  ZERO:AUTO {OFF|ONCE|ON}
+  ZERO:AUTO?
+  
+STATus
+  :QUEStionable:ENABle <enable value>
+  :QUEStionable:ENABle?
+  :QUEStionable:EVENt?
+STATus:PRESet
+
+SYSTem
+  :BEEPer
+  :BEEPer:STATe {OFF|ON}
+  :BEEPer:STATe?
+SYSTem:ERRor?
+SYSTem:VERSion?
+SYSTem:LOCal
+SYSTem:REMote
+SYSTem:RWLock
+
+TRIGger
+  :SOURce {BUS|IMMediate |EXTernal}
+  :SOURce?
+TRIGger
+  :DELay {<seconds>|MINimum|MAXimum}
+  :DELay? [MINimum|MAXimum]
+TRIGger
+  :DELay:AUTO {OFF|ON}
+  :DELay:AUTO?
+TRIGger
+  :COUNt {<value>|MINimum|MAXimum|INFinite}
+  :COUNt? [MINimum|MAXimum]
+\end{verbatim}
+
+
+\SUBSYSTEMSECTION{IEEE-488}
+
+\CMDSECTION{*CLS}
+\CMDSECTION{*ESE}
+\CMDSECTION{*ESE?}
+\CMDSECTION{*ESR?}
+\CMDSECTION{*IDN?}
+
+Возвращается строка, имитирующая мультиметр Hewlett-Packard 34401A.
+
+\CMDSECTION{*OPC}
+\CMDSECTION{*OPC?}
+\CMDSECTION{*RST}
+\CMDSECTION{*SRE}
+\CMDSECTION{*SRE?}
+\CMDSECTION{*STB?}
+\CMDSECTION{*TST?}
+
+Из-за отсутствия технической возможности фактически тестирование не производится.
+
+\CMDSECTION{*WAI}
+
+\SUBSYSTEMSECTION{CONFigure}
+
+В командах \CMD{CONFigure:<function>} параметр \PARAM{resolution} не используется, поскольку \V{} не имеет возможности управления точностью измерений.
+
+\CMDSECTION{CONFigure:RESistance}
+\CMDSECTION{CONFigure:VOLTage:AC}
+\CMDSECTION{CONFigure:VOLTage:DC}
+\CMDSECTION{CONFigure:VOLTage:DC:RATio}
+
+\SUBSYSTEMSECTION{INPut}
+
+\CMDSECTION{INPut:IMPedance:AUTO}
+\CMDSECTION{INPut:IMPedance:AUTO?}
+
+\V{} не позволяет управлять входным сопротивлением, поэтому команда отрабатывает, состояние сохраняется в оперативной памяти, но реально изменения входного сопротивления \V{} не происходит.
+
+\SUBSYSTEMSECTION{MEASure}
+
+\CMDSECTION{MEASure:RESistance?}
+\CMDSECTION{MEASure:VOLTage:AC?}
+\CMDSECTION{MEASure:VOLTage:DC?}
+\CMDSECTION{MEASure:VOLTage:DC:RATio?}
+
+\SUBSYSTEMSECTION{ROUTe}
+
+\CMDSECTION{ROUTe:TERMinals?}
+
+Всегда возвращает \CMD{FRON}, поскольку у \V{} нет разъёмов на задней панели.
+
+\SUBSYSTEMSECTION{SYSTem}
+
+\CMDSECTION{SYSTem:BEEPer}
+
+Команда принимается, но зуммер не звучит в связи с отсутствием соответствующего устройства на плате микроконтроллера.
+
+\CMDSECTION{SYSTem:BEEPer:STATe?}
+\CMDSECTION{SYSTem:LOCal}
+\CMDSECTION{SYSTem:REMote}
+
+Команда \CMD{SYSTem:REMote} всегда действует аналогично команде \CMD{SYSTem:RWLock}, то есть управление вольтметром с передней панели запрещено в remote-режиме.
+
+\CMDSECTION{SYSTem:RWLock}
+\CMDSECTION{SYSTem:VERSion?}
 
 \section{Подключение {\Arduino} к \V}
 
@@ -139,80 +378,5 @@ GND & 1 & 4 & А \\
 \caption{Расположение контактов на разъёме ДУ}
 \label{pic-rc-jack}
 \end{figure*}
-
-\section{Список команд}
-
-В данном разделе приведены все \SCPI{} команды, реализованные в прошивке. Порядок изложения --- алфавитный с разбивкой на подсистемы. Команда может сопровождаться комментарием, описывающим особенности реализации.
-
-Данная прошивка реализует ограниченное множество \SCPI{} команд мультиметра Hewlett-Packard (ныне~--- Agilent) \mbox{34401A}. Микроконтроллер подключается к ПЭВМ посредством USB соединения и эмулирует последовательный порт. Таким образом, связка <<микроконтроллер --- вольтметр>> со стороны ПЭВМ выглядит как мультиметр \mbox{34401A}, и может использоваться в измерительных программах без модификации программного кода, хотя и с учётом ограничений \V (по скорости работы, точности и пр.).
-
-Команды, отсутствующие в данном списке, не реализованы. При получении нереализованной или неизвестной команды генерируется ошибка \CMD{-113} <<Undefined header>>.
-
-\SUBSYSTEMSECTION{IEEE-488}
-
-\CMDSECTION{*CLS}
-\CMDSECTION{*ESE}
-\CMDSECTION{*ESE?}
-\CMDSECTION{*ESR?}
-\CMDSECTION{*IDN?}
-
-Возвращается строка, имитирующая мультиметр Hewlett-Packard 34401A.
-
-\CMDSECTION{*OPC}
-\CMDSECTION{*OPC?}
-\CMDSECTION{*RST}
-\CMDSECTION{*SRE}
-\CMDSECTION{*SRE?}
-\CMDSECTION{*STB?}
-\CMDSECTION{*TST?}
-
-Из-за отсутствия технической возможности фактически тестирование не производится.
-
-\CMDSECTION{*WAI}
-
-\SUBSYSTEMSECTION{CONFigure}
-
-В командах \CMD{CONFigure:<function>} параметр \PARAM{resolution} не используется, поскольку \V{} не имеет возможности управления точностью измерений.
-
-\CMDSECTION{CONFigure:RESistance}
-\CMDSECTION{CONFigure:VOLTage:AC}
-\CMDSECTION{CONFigure:VOLTage:DC}
-\CMDSECTION{CONFigure:VOLTage:DC:RATio}
-
-\SUBSYSTEMSECTION{INPut}
-
-\CMDSECTION{INPut:IMPedance:AUTO}
-\CMDSECTION{INPut:IMPedance:AUTO?}
-
-Команда отрабатывает, состояние сохраняется в оперативной памяти, но реально изменения входного сопротивления \V{} не происходит.
-
-\SUBSYSTEMSECTION{MEASure}
-
-\CMDSECTION{MEASure:RESistance?}
-\CMDSECTION{MEASure:VOLTage:AC?}
-\CMDSECTION{MEASure:VOLTage:DC?}
-\CMDSECTION{MEASure:VOLTage:DC:RATio?}
-
-\SUBSYSTEMSECTION{ROUTe}
-
-\CMDSECTION{ROUTe:TERMinals?}
-
-Всегда возвращает \CMD{FRON}.
-
-\SUBSYSTEMSECTION{SYSTem}
-
-\CMDSECTION{SYSTem:ERRor}
-\CMDSECTION{SYSTem:BEEPer}
-
-Команда принимается, но зуммер не звучит в связи с отсутствием соответствующего устройства на плате микроконтроллера.
-
-\CMDSECTION{SYSTem:BEEPer:STATe?}
-\CMDSECTION{SYSTem:LOCal}
-\CMDSECTION{SYSTem:REMote}
-
-Команда \CMD{SYSTem:REMote} всегда действует аналогично команде \CMD{SYSTem:RWLock}, то есть управление вольтметром с передней панели запрещено в remote-режиме.
-
-\CMDSECTION{SYSTem:RWLock}
-\CMDSECTION{SYSTem:VERSion?}
 
 \end{document}

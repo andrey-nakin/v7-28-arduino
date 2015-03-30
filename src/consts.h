@@ -75,6 +75,7 @@
 
 #define	V7_28_DEF_OVERRUN	1.2
 #define V7_28_RESOLUTION 1.0e-5
+#define	V7_28_NPLC 100
 
 /* non-standard error codes */
 #define V7_28_ERROR_SET_MODE	(SCPI_ERROR_INTERNAL_START + 1)

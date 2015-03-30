@@ -28,7 +28,13 @@ static size_t send(const uint8_t* data, size_t len);
 static int16_t get_milliseconds(uint32_t* tm);
 static int16_t sleep_milliseconds(uint32_t ms);
 static int16_t set_interrupt_status(scpi_bool_t disabled);
-static int16_t set_global_bool_option(const scpimm_option_t option, const scpi_bool_t value);
+static int16_t get_global_bool_param(const scpimm_bool_param_t param, scpi_bool_t* value);
+static int16_t set_global_bool_param(const scpimm_bool_param_t param, const scpi_bool_t value);
+static int16_t get_bool_param(scpimm_mode_t mode, const scpimm_bool_param_t param, scpi_bool_t* value);
+static int16_t set_bool_param(scpimm_mode_t mode, const scpimm_bool_param_t param, const scpi_bool_t value);
+static int16_t get_numeric_param_values(scpimm_mode_t mode, scpimm_numeric_param_t param, const double** values);
+static int16_t get_numeric_param(scpimm_mode_t mode, scpimm_numeric_param_t param, size_t* value_index);
+static int16_t set_numeric_param(scpimm_mode_t mode, scpimm_numeric_param_t param, size_t value_index);
 static int16_t reset();
 static int16_t set_remote(scpi_bool_t remote, scpi_bool_t lock);
 static int16_t beep();
@@ -49,7 +55,13 @@ static scpimm_interface_t scpimm_interface = {
 	get_milliseconds,
 	sleep_milliseconds,
 	set_interrupt_status,
-	set_global_bool_option,
+	get_global_bool_param,
+	set_global_bool_param,
+	get_bool_param,
+	set_bool_param,
+	get_numeric_param_values,
+	get_numeric_param,
+	set_numeric_param,
 	reset,
 	set_remote,
 	beep,
@@ -94,6 +106,15 @@ DECL_MODE_CONSTANTS(
 );
 
 /******************************************************************************
+  Defitions
+******************************************************************************/
+
+typedef struct {
+	size_t range_index;
+	scpi_bool_t auto_range;
+} v7_28_mode_params_t;
+
+/******************************************************************************
   Global variables
 ******************************************************************************/
 
@@ -102,7 +123,10 @@ static struct {
 	scpimm_mode_t mode;
 	size_t	range_index;
 	scpi_bool_t auto_range;
+	scpi_bool_t input_impedance_auto;
 } v7_28_state;
+
+static v7_28_mode_params_t dcv_mode_params, acv_mode_params, dcv_ratio_mode_params, resistance_mode_params;
 
 /******************************************************************************
   Internal functions
@@ -337,6 +361,30 @@ static int16_t set_range(const scpimm_mode_t mode, size_t range_index) {
 #undef	RANGE_CASE
 }
 
+static int16_t get_mode_range(scpimm_mode_t mode, size_t* value_index) {
+#define MODE_CASE(mode, var) case mode: range_index = var ## _mode_params.range_index; break
+
+	size_t range_index;
+
+	switch (mode) {
+	MODE_CASE(SCPIMM_MODE_DCV, dcv);
+	MODE_CASE(SCPIMM_MODE_DCV_RATIO, dcv_ratio);
+	MODE_CASE(SCPIMM_MODE_ACV, acv);
+	MODE_CASE(SCPIMM_MODE_RESISTANCE_2W, resistance);
+
+	default:
+		return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
+	}
+
+	if (value_index) {
+		*value_index = range_index;
+	}
+
+	return SCPI_ERROR_OK;
+
+#undef MODE_CASE
+}
+
 /******************************************************************************
   Multimeter interface implementation
 ******************************************************************************/
@@ -548,21 +596,83 @@ static int16_t set_interrupt_status(const scpi_bool_t disabled) {
 	return SCPI_ERROR_OK;
 }
 
-static int16_t set_global_bool_option(const scpimm_option_t option, const scpi_bool_t value) {
+static int16_t get_global_bool_param(const scpimm_bool_param_t param, scpi_bool_t* value) {
 	int16_t result = SCPI_ERROR_OK;
+	scpi_bool_t res;
 
-	switch (option) {
-	case SCPIMM_OPTION_INPUT_IMPEDANCE_AUTO:
+	switch (param) {
+	case SCPIMM_PARAM_INPUT_IMPEDANCE_AUTO:
 		// voltmeter does not support remote control of input impedance
 		// but we do not return error for compatibility with Agilent 34401A
-		(void) value;	//	suppress warning
+		res = v7_28_state.input_impedance_auto;
+		break;
+	}
+
+	if (value) {
+		*value = res;
+	}
+
+	return result;
+}
+
+static int16_t set_global_bool_param(const scpimm_bool_param_t param, const scpi_bool_t value) {
+	int16_t result = SCPI_ERROR_OK;
+
+	switch (param) {
+	case SCPIMM_PARAM_INPUT_IMPEDANCE_AUTO:
+		// voltmeter does not support remote control of input impedance
+		// but we do not return error for compatibility with Agilent 34401A
+		v7_28_state.input_impedance_auto = value;
 		break;
 	}
 
 	return result;
 }
 
+static int16_t get_bool_param(const scpimm_mode_t mode, const scpimm_bool_param_t param, scpi_bool_t* const value) {
+	// TODO
+}
+
+static int16_t set_bool_param(const scpimm_mode_t mode, const scpimm_bool_param_t param, const scpi_bool_t value) {
+	// TODO
+}
+
+static int16_t get_numeric_param_values(scpimm_mode_t mode, scpimm_numeric_param_t param, const double** values) {
+	// TODO
+}
+
+static int16_t get_numeric_param(scpimm_mode_t mode, scpimm_numeric_param_t param, size_t* value_index) {
+	switch (param) {
+	case SCPIMM_PARAM_RANGE:
+		return get_mode_range(mode, value_index);
+
+	case SCPIMM_PARAM_NPLC:
+		if (value_index) {
+			*value_index = V7_28_NPLC;	//	same value for all modes
+		}
+		break;
+
+	case SCPIMM_PARAM_RANGE_OVERRUN:
+		return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
+	}
+
+	return SCPI_ERROR_OK;
+}
+
+static int16_t set_numeric_param(scpimm_mode_t mode, scpimm_numeric_param_t param, size_t value_index) {
+	// TODO
+}
+
 static int16_t reset() {
+#define	RESET_MODE_PARAMS(var) var ## _mode_params.range_index = 0; var ## _mode_params.auto_range = TRUE
+
+	RESET_MODE_PARAMS(dcv);
+	RESET_MODE_PARAMS(dcv_ratio);
+	RESET_MODE_PARAMS(acv);
+	RESET_MODE_PARAMS(resistance);
+
+	v7_28_state.input_impedance_auto = FALSE;
+
 	set_disabled(TRUE);
 	set_auto_range(TRUE);	//  enable autorange
 
@@ -573,6 +683,8 @@ static int16_t reset() {
 	set_disabled(FALSE);
 
 	return SCPI_ERROR_OK;
+
+#undef	RESET_MODE_PARAMS
 }
 
 static int16_t set_remote(scpi_bool_t remote, scpi_bool_t lock) {

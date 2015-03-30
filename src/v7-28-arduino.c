@@ -4,8 +4,6 @@
 #include "consts.h"
 #include "pins.h"
 
-
-
 #define STATIC_ASSERT(COND, MSG) typedef char static_assertion_##MSG[(COND) ? 1 : -1]
 #define P99_PROTECT(...) __VA_ARGS__
 #define FOR_4(expr) expr ## 0, expr ## 1, expr ## 2, expr ## 3
@@ -39,6 +37,20 @@ static int16_t reset();
 static int16_t set_remote(scpi_bool_t remote, scpi_bool_t lock);
 static int16_t beep();
 static const char* get_idn();
+
+/******************************************************************************
+  Defitions
+******************************************************************************/
+
+typedef struct {
+	const double* ranges;
+	const double* overruns;
+} v7_28_mode_constants_t;
+
+typedef struct {
+	size_t range_index;
+	scpi_bool_t auto_range;
+} v7_28_mode_params_t;
 
 /******************************************************************************
   Global constants
@@ -79,7 +91,20 @@ static scpimm_interface_t scpimm_interface = {
 	static const uint8_t func ## _range_codes[] = codes;	\
 	STATIC_ASSERT(sizeof(func ## _ranges) / sizeof(func ## _ranges[0]) == sizeof(func ## _overruns) / sizeof(func ## _overruns[0]), func ## _ranges_equals_to_overruns);	\
 	STATIC_ASSERT(sizeof(func ## _ranges) / sizeof(func ## _ranges[0]) == sizeof(func ## _resolutions) / sizeof(func ## _resolutions[0]) + 1, func ## _ranges_equals_to_resolutions);	\
-	STATIC_ASSERT(sizeof(func ## _ranges) / sizeof(func ## _ranges[0]) == sizeof(func ## _range_codes) / sizeof(func ## _range_codes[0]) + 1, func ## _ranges_equals_to_codes)
+	STATIC_ASSERT(sizeof(func ## _ranges) / sizeof(func ## _ranges[0]) == sizeof(func ## _range_codes) / sizeof(func ## _range_codes[0]) + 1, func ## _ranges_equals_to_codes);	\
+	static v7_28_mode_constants_t func ## _constants = {func ## _ranges, func ## _overruns};
+
+#define MODE_CONSTANTS(mode)	\
+		mode == SCPIMM_MODE_DCV ? &dcv_constants	\
+		: mode == SCPIMM_MODE_ACV ? &acv_constants	\
+		: mode == SCPIMM_MODE_RESISTANCE_2W ? &resistance_constants	\
+		: NULL
+
+#define MODE_PARAMS(mode)	\
+		mode == SCPIMM_MODE_DCV ? &v7_28_state.dcv_params	\
+		: mode == SCPIMM_MODE_ACV ? &v7_28_state.acv_params	\
+		: mode == SCPIMM_MODE_RESISTANCE_2W ? &v7_28_state.resistance_params	\
+		: NULL
 
 DECL_MODE_CONSTANTS(
 		dcv,
@@ -105,14 +130,7 @@ DECL_MODE_CONSTANTS(
 		P99_PROTECT({FOR_6(V7_28_RANGE_CODE_RESISTANCE_)})
 );
 
-/******************************************************************************
-  Defitions
-******************************************************************************/
-
-typedef struct {
-	size_t range_index;
-	scpi_bool_t auto_range;
-} v7_28_mode_params_t;
+static const double nplcs[] = {V7_28_NPLC, TERMINATOR};
 
 /******************************************************************************
   Global variables
@@ -121,12 +139,8 @@ typedef struct {
 static struct {
 	uint8_t initialized;
 	scpimm_mode_t mode;
-	size_t	range_index;
-	scpi_bool_t auto_range;
-	scpi_bool_t input_impedance_auto;
+	v7_28_mode_params_t dcv_params, acv_params, dcv_ratio_params, resistance_params;
 } v7_28_state;
-
-static v7_28_mode_params_t dcv_mode_params, acv_mode_params, dcv_ratio_mode_params, resistance_mode_params;
 
 /******************************************************************************
   Internal functions
@@ -361,30 +375,6 @@ static int16_t set_range(const scpimm_mode_t mode, size_t range_index) {
 #undef	RANGE_CASE
 }
 
-static int16_t get_mode_range(scpimm_mode_t mode, size_t* value_index) {
-#define MODE_CASE(mode, var) case mode: range_index = var ## _mode_params.range_index; break
-
-	size_t range_index;
-
-	switch (mode) {
-	MODE_CASE(SCPIMM_MODE_DCV, dcv);
-	MODE_CASE(SCPIMM_MODE_DCV_RATIO, dcv_ratio);
-	MODE_CASE(SCPIMM_MODE_ACV, acv);
-	MODE_CASE(SCPIMM_MODE_RESISTANCE_2W, resistance);
-
-	default:
-		return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
-	}
-
-	if (value_index) {
-		*value_index = range_index;
-	}
-
-	return SCPI_ERROR_OK;
-
-#undef MODE_CASE
-}
-
 /******************************************************************************
   Multimeter interface implementation
 ******************************************************************************/
@@ -400,6 +390,11 @@ static int16_t set_mode(const scpimm_mode_t mode, const scpimm_mode_params_t* pa
 	scpi_bool_t change_mode = TRUE;
 	uint8_t mode_code, expected;
 	int n = V7_28_SET_MODE_MAX_STEPS;
+	v7_28_mode_params_t* const mode_params = MODE_PARAMS(mode);
+
+	if (!params) {
+		return SCPI_ERROR_UNDEFINED_HEADER;
+	}
 
 	if (is_mode_initialized()) {
 		change_mode = mode != v7_28_state.mode;
@@ -442,12 +437,10 @@ static int16_t set_mode(const scpimm_mode_t mode, const scpimm_mode_params_t* pa
 
 	if (params) {
 		set_range(mode, params->range_index);
-		v7_28_state.range_index = params->range_index;
-		set_state_initialized(V7_28_STATE_INITIALIZED_RANGE);
+		mode_params->range_index = params->range_index;
 
 		set_auto_range(params->auto_range);
-		v7_28_state.auto_range = params->auto_range;
-		set_state_initialized(V7_28_STATE_INITIALIZED_AUTO_RANGE);
+		mode_params->auto_range = params->auto_range;
 
 		// params->resolution is ignored
 	}
@@ -476,24 +469,24 @@ static int16_t set_mode(const scpimm_mode_t mode, const scpimm_mode_params_t* pa
     }
 }
 
-static int16_t get_mode(scpimm_mode_t* mode, scpimm_mode_params_t* params) {
+static int16_t get_mode(scpimm_mode_t* const mode, scpimm_mode_params_t* const params) {
+	if (!is_mode_initialized()) {
+		return V7_28_ERROR_MODE_NOT_INITIALIZED;
+	}
+
 	if (mode) {
-		if (!is_mode_initialized()) {
-			return V7_28_ERROR_MODE_NOT_INITIALIZED;
-		}
 		*mode = v7_28_state.mode;
 	}
 
 	if (params) {
-		if (!is_state_initialized(V7_28_STATE_INITIALIZED_AUTO_RANGE)) {
-			return V7_28_ERROR_AUTO_RANGE_NOT_INITIALIZED;
+		const v7_28_mode_params_t* const mode_params = MODE_PARAMS(v7_28_state.mode);
+		if (!params) {
+			return SCPI_ERROR_UNDEFINED_HEADER;
 		}
-		params->auto_range = v7_28_state.auto_range;
 
-		if (!is_state_initialized(V7_28_STATE_INITIALIZED_RANGE)) {
-			return V7_28_ERROR_RANGE_NOT_INITIALIZED;
-		}
-		params->range_index = v7_28_state.range_index;
+		params->auto_range = mode_params->auto_range;
+
+		params->range_index = mode_params->range_index;
 		params->resolution_index = 0;
 	}
 
@@ -598,14 +591,26 @@ static int16_t set_interrupt_status(const scpi_bool_t disabled) {
 
 static int16_t get_global_bool_param(const scpimm_bool_param_t param, scpi_bool_t* value) {
 	int16_t result = SCPI_ERROR_OK;
-	scpi_bool_t res;
+	scpi_bool_t res = FALSE;
 
 	switch (param) {
 	case SCPIMM_PARAM_INPUT_IMPEDANCE_AUTO:
-		// voltmeter does not support remote control of input impedance
-		// but we do not return error for compatibility with Agilent 34401A
-		res = v7_28_state.input_impedance_auto;
+		// constant non-configurable value
+		res = V7_28_INPUT_IMPEDANCE_AUTO;
 		break;
+
+	case SCPIMM_PARAM_ZERO_AUTO:
+		// constant non-configurable value
+		res = V7_28_AUTO_ZERO;
+		break;
+
+	case SCPIMM_PARAM_ZERO_AUTO_ONCE:
+		// constant non-configurable value
+		res = V7_28_AUTO_ZERO_ONCE;
+		break;
+
+	case SCPIMM_PARAM_RANGE_AUTO:
+		return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
 	}
 
 	if (value) {
@@ -619,37 +624,145 @@ static int16_t set_global_bool_param(const scpimm_bool_param_t param, const scpi
 	int16_t result = SCPI_ERROR_OK;
 
 	switch (param) {
+	// these parameters are not configurable
+	// but we do not emit error due to compatibility with Agilent 34401A
 	case SCPIMM_PARAM_INPUT_IMPEDANCE_AUTO:
-		// voltmeter does not support remote control of input impedance
-		// but we do not return error for compatibility with Agilent 34401A
-		v7_28_state.input_impedance_auto = value;
+	case SCPIMM_PARAM_ZERO_AUTO:
+	case SCPIMM_PARAM_ZERO_AUTO_ONCE:
 		break;
+
+	case SCPIMM_PARAM_RANGE_AUTO:
+		return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
 	}
 
 	return result;
 }
 
 static int16_t get_bool_param(const scpimm_mode_t mode, const scpimm_bool_param_t param, scpi_bool_t* const value) {
-	// TODO
+	const v7_28_mode_params_t* const params = MODE_PARAMS(mode);
+	scpi_bool_t res = FALSE;
+
+	if (!params) {
+		return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
+	}
+
+	switch (param) {
+	case SCPIMM_PARAM_RANGE_AUTO:
+		res = params->auto_range;
+		break;
+
+	case SCPIMM_PARAM_ZERO_AUTO:
+	case SCPIMM_PARAM_ZERO_AUTO_ONCE:
+	case SCPIMM_PARAM_INPUT_IMPEDANCE_AUTO:
+		return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
+	}
+
+	if (value) {
+		*value = res;
+	}
+
+	return SCPI_ERROR_OK;
 }
 
 static int16_t set_bool_param(const scpimm_mode_t mode, const scpimm_bool_param_t param, const scpi_bool_t value) {
-	// TODO
+	v7_28_mode_params_t* const params = MODE_PARAMS(mode);
+
+	if (!params) {
+		return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
+	}
+
+	switch (param) {
+	case SCPIMM_PARAM_RANGE_AUTO:
+		params->auto_range = value;
+		if (mode == v7_28_state.mode) {
+			set_auto_range(value);
+		}
+		break;
+
+	case SCPIMM_PARAM_ZERO_AUTO:
+	case SCPIMM_PARAM_ZERO_AUTO_ONCE:
+	case SCPIMM_PARAM_INPUT_IMPEDANCE_AUTO:
+		return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
+	}
+
+	return SCPI_ERROR_OK;
 }
 
 static int16_t get_numeric_param_values(scpimm_mode_t mode, scpimm_numeric_param_t param, const double** values) {
-	// TODO
+	const double* v = NULL;
+	const v7_28_mode_constants_t* const constants = MODE_CONSTANTS(mode);
+
+	if (!constants) {
+		return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
+	}
+
+	switch (param) {
+	case SCPIMM_PARAM_RANGE:
+		v = constants->ranges;
+		break;
+
+	case SCPIMM_PARAM_RANGE_OVERRUN:
+		v = constants->overruns;
+		break;
+
+	case SCPIMM_PARAM_NPLC:
+		v = nplcs;	//	same value for all modes
+		break;
+
+	}
+
+	if (values) {
+		*values = v;
+	}
+
+	return SCPI_ERROR_OK;
 }
 
 static int16_t get_numeric_param(scpimm_mode_t mode, scpimm_numeric_param_t param, size_t* value_index) {
+	const v7_28_mode_params_t* const params = MODE_PARAMS(mode);
+	size_t res = 0;
+
+	if (!params) {
+		return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
+	}
+
 	switch (param) {
 	case SCPIMM_PARAM_RANGE:
-		return get_mode_range(mode, value_index);
+		res = params->range_index;
+		break;
 
 	case SCPIMM_PARAM_NPLC:
-		if (value_index) {
-			*value_index = V7_28_NPLC;	//	same value for all modes
+		res = 0; //	same value for all modes
+		break;
+
+	case SCPIMM_PARAM_RANGE_OVERRUN:
+		return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
+	}
+
+	if (value_index) {
+		*value_index = res;	//	same value for all modes
+	}
+
+	return SCPI_ERROR_OK;
+}
+
+static int16_t set_numeric_param(const scpimm_mode_t mode, const scpimm_numeric_param_t param, const size_t value_index) {
+	v7_28_mode_params_t* const params = MODE_PARAMS(mode);
+
+	if (!params) {
+		return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
+	}
+
+	switch (param) {
+	case SCPIMM_PARAM_RANGE:
+		params->range_index = value_index;
+		if (mode == v7_28_state.mode) {
+			set_range(mode, value_index);
 		}
+		break;
+
+	case SCPIMM_PARAM_NPLC:
+		// do not use value, this parameter is not configurable in V7-28
 		break;
 
 	case SCPIMM_PARAM_RANGE_OVERRUN:
@@ -659,19 +772,16 @@ static int16_t get_numeric_param(scpimm_mode_t mode, scpimm_numeric_param_t para
 	return SCPI_ERROR_OK;
 }
 
-static int16_t set_numeric_param(scpimm_mode_t mode, scpimm_numeric_param_t param, size_t value_index) {
-	// TODO
+static void reset_mode_params(v7_28_mode_params_t* mp) {
+	mp->range_index = 0;
+	mp->auto_range = TRUE;
 }
 
 static int16_t reset() {
-#define	RESET_MODE_PARAMS(var) var ## _mode_params.range_index = 0; var ## _mode_params.auto_range = TRUE
-
-	RESET_MODE_PARAMS(dcv);
-	RESET_MODE_PARAMS(dcv_ratio);
-	RESET_MODE_PARAMS(acv);
-	RESET_MODE_PARAMS(resistance);
-
-	v7_28_state.input_impedance_auto = FALSE;
+	reset_mode_params(&v7_28_state.dcv_params);
+	reset_mode_params(&v7_28_state.dcv_ratio_params);
+	reset_mode_params(&v7_28_state.acv_params);
+	reset_mode_params(&v7_28_state.resistance_params);
 
 	set_disabled(TRUE);
 	set_auto_range(TRUE);	//  enable autorange
@@ -683,8 +793,6 @@ static int16_t reset() {
 	set_disabled(FALSE);
 
 	return SCPI_ERROR_OK;
-
-#undef	RESET_MODE_PARAMS
 }
 
 static int16_t set_remote(scpi_bool_t remote, scpi_bool_t lock) {

@@ -590,7 +590,6 @@ static int16_t set_interrupt_status(const scpi_bool_t disabled) {
 }
 
 static int16_t get_global_bool_param(const scpimm_bool_param_t param, scpi_bool_t* value) {
-	int16_t result = SCPI_ERROR_OK;
 	scpi_bool_t res = FALSE;
 
 	switch (param) {
@@ -617,12 +616,10 @@ static int16_t get_global_bool_param(const scpimm_bool_param_t param, scpi_bool_
 		*value = res;
 	}
 
-	return result;
+	return SCPI_ERROR_OK;
 }
 
 static int16_t set_global_bool_param(const scpimm_bool_param_t param, const scpi_bool_t value) {
-	int16_t result = SCPI_ERROR_OK;
-
 	switch (param) {
 	// these parameters are not configurable
 	// but we do not emit error due to compatibility with Agilent 34401A
@@ -635,7 +632,7 @@ static int16_t set_global_bool_param(const scpimm_bool_param_t param, const scpi
 		return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
 	}
 
-	return result;
+	return SCPI_ERROR_OK;
 }
 
 static int16_t get_bool_param(const scpimm_mode_t mode, const scpimm_bool_param_t param, scpi_bool_t* const value) {

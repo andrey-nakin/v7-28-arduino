@@ -5,6 +5,8 @@
 # Serial port the Arduino works on. Used when burning HEX code to Arduino's flash memory
 SERIAL = /dev/ttyACM0
 
+SCPIMM_VERSION=1.0.0
+
 ARDUINO_DEF = 105
 ARDUINO_DIR = /home/andrey/opt/arduino-1.0.5
 ARDUINO_INCLUDES = -I$(ARDUINO_DIR)/hardware/arduino/cores/arduino -I$(ARDUINO_DIR)/hardware/arduino/variants/mega
@@ -110,6 +112,16 @@ clean-objs:
 
 clean:	clean-objs
 	rm -f *.eep *.hex
+
+dist:
+	rm -fr /tmp/v7-28-dist
+	mkdir /tmp/v7-28-dist
+	cd doc; pdflatex scpi-commands.tex
+	cp v7-28-arduino.hex /tmp/v7-28-dist/v7-28-arduino.${SCPIMM_VERSION}.hex
+	cp burn.cmd /tmp/v7-28-dist/
+	cp doc/scpi-commands.pdf /tmp/v7-28-dist/scpi-commands.${SCPIMM_VERSION}.pdf
+	m4 --define=SCPIMM_VERSION=$(SCPIMM_VERSION) burn.cmd > /tmp/v7-28-dist/burn.cmd
+	cd /tmp/v7-28-dist/; zip -m -j v7-28-arduino.${SCPIMM_VERSION}.zip *
 
 ##############################################################################
 # Arduino flash burning targets

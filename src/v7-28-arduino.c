@@ -671,6 +671,8 @@ static int16_t get_numeric_param_values(scpimm_mode_t mode, scpimm_numeric_param
 		v = nplcs;	//	same value for all modes
 		break;
 
+	case SCPIMM_PARAM_RESOLUTION:
+		return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
 	}
 
 	if (values) {
@@ -691,6 +693,10 @@ static int16_t get_numeric_param(scpimm_mode_t mode, scpimm_numeric_param_t para
 	switch (param) {
 	case SCPIMM_PARAM_RANGE:
 		res = params->range_index;
+		break;
+
+	case SCPIMM_PARAM_RESOLUTION:
+		res = 0; //	same value for all modes
 		break;
 
 	case SCPIMM_PARAM_NPLC:
@@ -723,6 +729,7 @@ static int16_t set_numeric_param(const scpimm_mode_t mode, const scpimm_numeric_
 		}
 		break;
 
+	case SCPIMM_PARAM_RESOLUTION:
 	case SCPIMM_PARAM_NPLC:
 		// do not use value, this parameter is not configurable in V7-28
 		break;

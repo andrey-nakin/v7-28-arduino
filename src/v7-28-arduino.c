@@ -19,7 +19,6 @@
 static int16_t setup_voltmeter();
 static int16_t set_mode(const scpimm_mode_t mode, const scpimm_mode_params_t* params);
 static int16_t get_mode(scpimm_mode_t* mode, scpimm_mode_params_t* params);
-static int16_t get_allowed_ranges(scpimm_mode_t mode, const double** const ranges, const double** const overruns);
 static int16_t get_allowed_resolutions(scpimm_mode_t mode, size_t range_index, const double** resolutions);
 static int16_t start_measure();
 static size_t send(const uint8_t* data, size_t len);
@@ -60,7 +59,6 @@ static scpimm_interface_t scpimm_interface = {
 	setup_voltmeter,
 	set_mode,
 	get_mode,
-	get_allowed_ranges,
 	get_allowed_resolutions,
 	start_measure,
 	send,
@@ -491,39 +489,6 @@ static int16_t get_mode(scpimm_mode_t* const mode, scpimm_mode_params_t* const p
 	}
 
 	return SCPI_ERROR_OK;
-}
-
-static int16_t get_allowed_ranges(scpimm_mode_t mode, const double** const ranges, const double** const overruns) {
-#define	RANGE_CASE(func, var)	\
-	case SCPIMM_MODE_ ## func:	\
-		ranges_src = var ## _ranges;	\
-		overruns_src = var ## _overruns;	\
-		break
-
-	const double *ranges_src, *overruns_src;
-
-	switch (mode) {
-		RANGE_CASE(DCV, dcv);
-		RANGE_CASE(DCV_RATIO, dcv);
-		RANGE_CASE(ACV, acv);
-		RANGE_CASE(RESISTANCE_2W, resistance);
-
-		default:
-			// mode is not supported
-			return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
-	}
-
-	if (ranges) {
-		*ranges = ranges_src;
-	}
-
-	if (overruns) {
-		*overruns = overruns_src;
-	}
-
-	return SCPI_ERROR_OK;
-
-#undef	RANGE_CASE
 }
 
 static int16_t get_allowed_resolutions(scpimm_mode_t mode, size_t range_index, const double** resolutions) {

@@ -18,7 +18,7 @@
 
 static int16_t setup_voltmeter();
 static int16_t set_mode(const scpimm_mode_t mode, const scpimm_mode_params_t* params);
-static int16_t get_mode(scpimm_mode_t* mode, scpimm_mode_params_t* params);
+static int16_t get_mode(scpimm_mode_t* mode);
 static int16_t get_allowed_resolutions(scpimm_mode_t mode, size_t range_index, const double** resolutions);
 static int16_t start_measure();
 static size_t send(const uint8_t* data, size_t len);
@@ -466,25 +466,13 @@ static int16_t set_mode(const scpimm_mode_t mode, const scpimm_mode_params_t* pa
     }
 }
 
-static int16_t get_mode(scpimm_mode_t* const mode, scpimm_mode_params_t* const params) {
+static int16_t get_mode(scpimm_mode_t* const mode) {
 	if (!is_mode_initialized()) {
 		return V7_28_ERROR_MODE_NOT_INITIALIZED;
 	}
 
 	if (mode) {
 		*mode = v7_28_state.mode;
-	}
-
-	if (params) {
-		const v7_28_mode_params_t* const mode_params = MODE_PARAMS(v7_28_state.mode);
-		if (!params) {
-			return SCPI_ERROR_UNDEFINED_HEADER;
-		}
-
-		params->auto_range = mode_params->auto_range;
-
-		params->range_index = mode_params->range_index;
-		params->resolution_index = 0;
 	}
 
 	return SCPI_ERROR_OK;

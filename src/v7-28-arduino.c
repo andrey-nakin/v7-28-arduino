@@ -23,7 +23,6 @@ static int16_t get_allowed_resolutions(scpimm_mode_t mode, size_t range_index, c
 static int16_t start_measure();
 static size_t send(const uint8_t* data, size_t len);
 static int16_t get_milliseconds(uint32_t* tm);
-static int16_t sleep_milliseconds(uint32_t ms);
 static int16_t set_interrupt_status(scpi_bool_t disabled);
 static int16_t get_global_bool_param(const scpimm_bool_param_t param, scpi_bool_t* value);
 static int16_t set_global_bool_param(const scpimm_bool_param_t param, const scpi_bool_t value);
@@ -33,7 +32,6 @@ static int16_t get_numeric_param_values(scpimm_mode_t mode, scpimm_numeric_param
 static int16_t get_numeric_param(scpimm_mode_t mode, scpimm_numeric_param_t param, size_t* value_index);
 static int16_t set_numeric_param(scpimm_mode_t mode, scpimm_numeric_param_t param, size_t value_index);
 static int16_t reset();
-static int16_t set_remote(scpi_bool_t remote, scpi_bool_t lock);
 static int16_t beep();
 static const char* get_idn();
 
@@ -63,7 +61,6 @@ static scpimm_interface_t scpimm_interface = {
 	start_measure,
 	send,
 	get_milliseconds,
-	sleep_milliseconds,
 	set_interrupt_status,
 	get_global_bool_param,
 	set_global_bool_param,
@@ -73,7 +70,6 @@ static scpimm_interface_t scpimm_interface = {
 	get_numeric_param,
 	set_numeric_param,
 	reset,
-	set_remote,
 	beep,
 	NULL,
 	NULL,
@@ -137,6 +133,7 @@ static const double nplcs[] = {V7_28_NPLC, TERMINATOR};
 static struct {
 	uint8_t initialized;
 	scpimm_mode_t mode;
+	scpi_bool_t remote;
 	v7_28_mode_params_t dcv_params, acv_params, dcv_ratio_params, resistance_params;
 } v7_28_state;
 
@@ -373,6 +370,10 @@ static int16_t set_range(const scpimm_mode_t mode, size_t range_index) {
 #undef	RANGE_CASE
 }
 
+static void set_remote(scpi_bool_t remote) {
+	digitalWrite(PIN_REMOTE, remote ? LOW : HIGH);
+}
+
 /******************************************************************************
   Multimeter interface implementation
 ******************************************************************************/
@@ -434,14 +435,12 @@ static int16_t set_mode(const scpimm_mode_t mode, const scpimm_mode_params_t* pa
     }
 
 	if (params) {
-		set_range(mode, params->range_index);
-		mode_params->range_index = params->range_index;
-
-		set_auto_range(params->auto_range);
 		mode_params->auto_range = params->auto_range;
-
-		// params->resolution is ignored
+		mode_params->range_index = params->range_index;
 	}
+
+	set_auto_range(params->auto_range);
+	set_range(mode, params->range_index);
 
 	// enable remote control for changes to take an effect
     set_disabled(FALSE);
@@ -540,11 +539,6 @@ static int16_t get_milliseconds(uint32_t* const tm) {
 	return SCPI_ERROR_OK;
 }
 
-static int16_t sleep_milliseconds(const uint32_t ms) {
-	delay(ms);
-	return SCPI_ERROR_OK;
-}
-
 static int16_t set_interrupt_status(const scpi_bool_t disabled) {
 	if (disabled) {
 		noInterrupts();
@@ -558,6 +552,11 @@ static int16_t get_global_bool_param(const scpimm_bool_param_t param, scpi_bool_
 	scpi_bool_t res = FALSE;
 
 	switch (param) {
+	case SCPIMM_PARAM_REMOTE:
+	case SCPIMM_PARAM_LOCK:
+		res = v7_28_state.remote;
+		break;
+
 	case SCPIMM_PARAM_INPUT_IMPEDANCE_AUTO:
 		// constant non-configurable value
 		res = V7_28_INPUT_IMPEDANCE_AUTO;
@@ -586,11 +585,16 @@ static int16_t get_global_bool_param(const scpimm_bool_param_t param, scpi_bool_
 
 static int16_t set_global_bool_param(const scpimm_bool_param_t param, const scpi_bool_t value) {
 	switch (param) {
+	case SCPIMM_PARAM_REMOTE:
+		set_remote(v7_28_state.remote = value);
+		break;
+
 	// these parameters are not configurable
 	// but we do not emit error due to compatibility with Agilent 34401A
 	case SCPIMM_PARAM_INPUT_IMPEDANCE_AUTO:
 	case SCPIMM_PARAM_ZERO_AUTO:
 	case SCPIMM_PARAM_ZERO_AUTO_ONCE:
+	case SCPIMM_PARAM_LOCK:
 		break;
 
 	case SCPIMM_PARAM_RANGE_AUTO:
@@ -616,6 +620,8 @@ static int16_t get_bool_param(const scpimm_mode_t mode, const scpimm_bool_param_
 	case SCPIMM_PARAM_ZERO_AUTO:
 	case SCPIMM_PARAM_ZERO_AUTO_ONCE:
 	case SCPIMM_PARAM_INPUT_IMPEDANCE_AUTO:
+	case SCPIMM_PARAM_REMOTE:
+	case SCPIMM_PARAM_LOCK:
 		return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
 	}
 
@@ -644,6 +650,8 @@ static int16_t set_bool_param(const scpimm_mode_t mode, const scpimm_bool_param_
 	case SCPIMM_PARAM_ZERO_AUTO:
 	case SCPIMM_PARAM_ZERO_AUTO_ONCE:
 	case SCPIMM_PARAM_INPUT_IMPEDANCE_AUTO:
+	case SCPIMM_PARAM_REMOTE:
+	case SCPIMM_PARAM_LOCK:
 		return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
 	}
 
@@ -753,6 +761,7 @@ static int16_t reset() {
 	reset_mode_params(&v7_28_state.resistance_params);
 
 	set_disabled(TRUE);
+	set_remote(v7_28_state.remote = TRUE);
 	set_auto_range(TRUE);	//  enable autorange
 
     digitalWrite(PIN_REMOTE, LOW);  //  enable remote mode
@@ -761,12 +770,6 @@ static int16_t reset() {
 
 	set_disabled(FALSE);
 
-	return SCPI_ERROR_OK;
-}
-
-static int16_t set_remote(scpi_bool_t remote, scpi_bool_t lock) {
-	(void) lock;
-	digitalWrite(PIN_REMOTE, remote ? LOW : HIGH);
 	return SCPI_ERROR_OK;
 }
 

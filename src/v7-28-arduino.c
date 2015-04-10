@@ -34,6 +34,7 @@ static int16_t set_numeric_param(scpimm_mode_t mode, scpimm_numeric_param_t para
 static int16_t reset();
 static int16_t beep();
 static const char* get_idn();
+static int16_t test();
 
 /******************************************************************************
   Defitions
@@ -73,7 +74,8 @@ static scpimm_interface_t scpimm_interface = {
 	beep,
 	NULL,
 	NULL,
-	get_idn
+	get_idn,
+	test
 };
 
 #define	TERMINATOR	-1.0
@@ -768,6 +770,22 @@ static int16_t beep() {
 
 static const char* get_idn() {
 	return V7_28_IDN;
+}
+
+static int16_t test() {
+	const scpimm_mode_t saved_mode = v7_28_state.mode;
+	static const scpimm_mode_t modes[] = {SCPIMM_MODE_DCV, SCPIMM_MODE_DCV_RATIO, SCPIMM_MODE_ACV, SCPIMM_MODE_RESISTANCE_4W};
+	size_t i;
+
+	for (i = 0; i < sizeof(modes) / sizeof(modes[0]); i++) {
+		const int16_t err = set_mode(modes[i], NULL);
+		if (SCPI_ERROR_OK != err) {
+			return err;
+		}
+		delay(500);
+	}
+
+	return set_mode(saved_mode, NULL);
 }
 
 /******************************************************************************

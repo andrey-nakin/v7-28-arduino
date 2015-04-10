@@ -20,7 +20,7 @@
 /* DPD pins К, 11, 12, Л */
 #define V7_28_READ_MODE_DCV				0x05
 #define V7_28_READ_MODE_ACV				0x05
-#define V7_28_READ_MODE_RESISTANCE_2W	0x02
+#define V7_28_READ_MODE_RESISTANCE_4W	0x02
 #define V7_28_READ_MODE_DCV_RATIO		0x0f
 
 #define V7_28_SET_MODE_DELAY		500
@@ -29,7 +29,7 @@
 /* RC pins А, 2, Б, 3, В */
 #define V7_28_MODE_DCV				0x0e
 #define V7_28_MODE_ACV				0x06
-#define V7_28_MODE_RESISTANCE_2W	0x09
+#define V7_28_MODE_RESISTANCE_4W	0x09
 #define V7_28_MODE_DCV_RATIO		0x1f
 
 #define V7_28_RANGE_DCV_0	0.1

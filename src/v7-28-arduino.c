@@ -91,13 +91,13 @@ static scpimm_interface_t scpimm_interface = {
 #define MODE_CONSTANTS(mode)	\
 		mode == SCPIMM_MODE_DCV ? &dcv_constants	\
 		: mode == SCPIMM_MODE_ACV ? &acv_constants	\
-		: mode == SCPIMM_MODE_RESISTANCE_2W ? &resistance_constants	\
+		: mode == SCPIMM_MODE_RESISTANCE_4W ? &resistance_constants	\
 		: NULL
 
 #define MODE_PARAMS(mode)	\
 		mode == SCPIMM_MODE_DCV ? &v7_28_state.dcv_params	\
 		: mode == SCPIMM_MODE_ACV ? &v7_28_state.acv_params	\
-		: mode == SCPIMM_MODE_RESISTANCE_2W ? &v7_28_state.resistance_params	\
+		: mode == SCPIMM_MODE_RESISTANCE_4W ? &v7_28_state.resistance_params	\
 		: NULL
 
 DECL_MODE_CONSTANTS(
@@ -358,7 +358,7 @@ static int16_t set_range(const scpimm_mode_t mode, size_t range_index) {
 		RANGE_CASE(DCV, dcv);
 		RANGE_CASE(DCV_RATIO, dcv);
 		RANGE_CASE(ACV, acv);
-		RANGE_CASE(RESISTANCE_2W, resistance);
+		RANGE_CASE(RESISTANCE_4W, resistance);
 
 	default:
 		return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
@@ -416,9 +416,9 @@ static int16_t set_mode(const scpimm_mode_t mode, const scpimm_mode_params_t* pa
 				expected = V7_28_READ_MODE_ACV;
 				break;
 
-			case SCPIMM_MODE_RESISTANCE_2W:
-				mode_code = V7_28_MODE_RESISTANCE_2W;
-				expected = V7_28_READ_MODE_RESISTANCE_2W;
+			case SCPIMM_MODE_RESISTANCE_4W:
+				mode_code = V7_28_MODE_RESISTANCE_4W;
+				expected = V7_28_READ_MODE_RESISTANCE_4W;
 				break;
 
 			default:
@@ -493,7 +493,7 @@ static int16_t get_allowed_resolutions(scpimm_mode_t mode, size_t range_index, c
 		RANGE_CASE(DCV, dcv);
 		RANGE_CASE(DCV_RATIO, dcv);
 		RANGE_CASE(ACV, acv);
-		RANGE_CASE(RESISTANCE_2W, resistance);
+		RANGE_CASE(RESISTANCE_4W, resistance);
 
 		default:
 			// mode is not supported

@@ -97,8 +97,8 @@ static scpimm_interface_t scpimm_interface = {
 		: NULL
 
 #define MODE_PARAMS(mode)	\
-		mode == SCPIMM_MODE_DCV ? &v7_28_state.dcv_params	\
-		: mode == SCPIMM_MODE_ACV ? &v7_28_state.acv_params	\
+		mode == SCPIMM_MODE_DCV || mode == SCPIMM_MODE_DCV_RATIO ? &v7_28_state.dcv_params	\
+		: mode == SCPIMM_MODE_ACV || mode == SCPIMM_MODE_ACV_RATIO ? &v7_28_state.acv_params	\
 		: mode == SCPIMM_MODE_RESISTANCE_4W ? &v7_28_state.resistance_params	\
 		: NULL
 
@@ -136,7 +136,7 @@ static struct {
 	uint8_t initialized;
 	scpimm_mode_t mode;
 	scpi_bool_t remote;
-	v7_28_mode_params_t dcv_params, acv_params, dcv_ratio_params, resistance_params;
+	v7_28_mode_params_t dcv_params, acv_params, dcv_ratio_params, acv_ratio_params, resistance_params;
 } v7_28_state;
 
 /******************************************************************************
@@ -360,6 +360,7 @@ static int16_t set_range(const scpimm_mode_t mode, size_t range_index) {
 		RANGE_CASE(DCV, dcv);
 		RANGE_CASE(DCV_RATIO, dcv);
 		RANGE_CASE(ACV, acv);
+		RANGE_CASE(ACV_RATIO, acv);
 		RANGE_CASE(RESISTANCE_4W, resistance);
 
 	default:
@@ -416,6 +417,11 @@ static int16_t set_mode(const scpimm_mode_t mode, const scpimm_mode_params_t* pa
 			case SCPIMM_MODE_ACV:
 				mode_code = V7_28_MODE_ACV;
 				expected = V7_28_READ_MODE_ACV;
+				break;
+
+			case SCPIMM_MODE_ACV_RATIO:
+				mode_code = V7_28_MODE_ACV_RATIO;
+				expected = V7_28_READ_MODE_ACV_RATIO;
 				break;
 
 			case SCPIMM_MODE_RESISTANCE_4W:
@@ -495,6 +501,7 @@ static int16_t get_allowed_resolutions(scpimm_mode_t mode, size_t range_index, c
 		RANGE_CASE(DCV, dcv);
 		RANGE_CASE(DCV_RATIO, dcv);
 		RANGE_CASE(ACV, acv);
+		RANGE_CASE(ACV_RATIO, acv);
 		RANGE_CASE(RESISTANCE_4W, resistance);
 
 		default:
@@ -748,6 +755,7 @@ static int16_t reset() {
 	reset_mode_params(&v7_28_state.dcv_params);
 	reset_mode_params(&v7_28_state.dcv_ratio_params);
 	reset_mode_params(&v7_28_state.acv_params);
+	reset_mode_params(&v7_28_state.acv_ratio_params);
 	reset_mode_params(&v7_28_state.resistance_params);
 
 	set_disabled(TRUE);
@@ -774,7 +782,7 @@ static const char* get_idn() {
 
 static int16_t test() {
 	const scpimm_mode_t saved_mode = v7_28_state.mode;
-	static const scpimm_mode_t modes[] = {SCPIMM_MODE_DCV, SCPIMM_MODE_DCV_RATIO, SCPIMM_MODE_ACV, SCPIMM_MODE_RESISTANCE_4W};
+	static const scpimm_mode_t modes[] = {SCPIMM_MODE_DCV, SCPIMM_MODE_DCV_RATIO, SCPIMM_MODE_ACV, SCPIMM_MODE_ACV_RATIO, SCPIMM_MODE_RESISTANCE_4W};
 	size_t i;
 
 	for (i = 0; i < sizeof(modes) / sizeof(modes[0]); i++) {

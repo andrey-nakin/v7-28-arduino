@@ -154,7 +154,8 @@ CONFigure
   :VOLTage[:DC] {<range>|MIN|MAX|DEF|AUTO},{<resolution>|MIN|MAX|DEF}
   :VOLTage:DC:RATio {<range>|MIN|MAX|DEF|AUTO},{<resolution>|MIN|MAX|DEF}
   :VOLTage:AC {<range>|MIN|MAX|DEF|AUTO},{<resolution>|MIN|MAX|DEF}
-  :RESistance {<range>|MIN|MAX|DEF|AUTO},{<resolution>|MIN|MAX|DEF}
+  :VOLTage:AC:RATio {<range>|MIN|MAX|DEF|AUTO},{<resolution>|MIN|MAX|DEF}
+  :FRESistance {<range>|MIN|MAX|DEF|AUTO},{<resolution>|MIN|MAX|DEF}
 CONFigure?
 
 DATA:POINts?
@@ -174,7 +175,8 @@ MEASure
   :VOLTage[:DC]? {<range>|MIN|MAX|DEF|AUTO},{<resolution>|MIN|MAX|DEF}
   :VOLTage:DC:RATio? {<range>|MIN|MAX|DEF|AUTO},{<resolution>|MIN|MAX|DEF}
   :VOLTage:AC? {<range>|MIN|MAX|DEF|AUTO},{<resolution>|MIN|MAX|DEF}
-  :RESistance? {<range>|MIN|MAX|DEF|AUTO},{<resolution>|MIN|MAX|DEF}
+  :VOLTage:AC:RATio? {<range>|MIN|MAX|DEF|AUTO},{<resolution>|MIN|MAX|DEF}
+  :FRESistance? {<range>|MIN|MAX|DEF|AUTO},{<resolution>|MIN|MAX|DEF}
 
 ROUTe:TERMinals?
 
@@ -186,34 +188,35 @@ SAMPle
   FUNCtion "VOLTage[:DC]"
   FUNCtion "VOLTage:DC:RATio"
   FUNCtion "VOLTage:AC"
-  FUNCtion "RESistance"
+  FUNCtion "VOLTage:AC:RATio"
+  FUNCtion "FRESistance"
   FUNCtion?
 [SENSe:]
   VOLTage[:DC]:RANGe {<range>|MINimum|MAXimum}
   VOLTage[:DC]:RANGe? [MINimum|MAXimum]
   VOLTage:AC:RANGe {<range>|MINimum|MAXimum}
   VOLTage:AC:RANGe? [MINimum|MAXimum]
-  RESistance:RANGe {<range>|MINimum|MAXimum}
-  RESistance:RANGe? [MINimum|MAXimum]
+  FRESistance:RANGe {<range>|MINimum|MAXimum}
+  FRESistance:RANGe? [MINimum|MAXimum]
 [SENSe:]
   VOLTage[:DC]:RANGe:AUTO {OFF|ON }
   VOLTage[:DC]:RANGe:AUTO?
   VOLTage:AC:RANGe:AUTO {OFF|ON }
   VOLTage:AC:RANGe:AUTO?
-  RESistance:RANGe:AUTO {OFF|ON }
-  RESistance:RANGe:AUTO?
+  FRESistance:RANGe:AUTO {OFF|ON }
+  FRESistance:RANGe:AUTO?
 [SENSe:]
   VOLTage[:DC]:RESolution {<resolution>|MINimum|MAXimum}
   VOLTage[:DC]:RESolution? [MINimum|MAXimum]
   VOLTage:AC:RESolution {<resolution>|MINimum|MAXimum}
   VOLTage:AC:RESolution? [MINimum|MAXimum]
-  RESistance:RESolution {<resolution>|MINimum|MAXimum}
-  RESistance:RESolution? [MINimum|MAXimum]
+  FRESistance:RESolution {<resolution>|MINimum|MAXimum}
+  FRESistance:RESolution? [MINimum|MAXimum]
 [SENSe:]
   VOLTage[:DC]:NPLCycles {100|MINimum|MAXimum}
   VOLTage[:DC]:NPLCycles? [MINimum|MAXimum]
-  RESistance:NPLCycles {100|MINimum|MAXimum}
-  RESistance:NPLCycles? [MINimum|MAXimum]
+  FRESistance:NPLCycles {100|MINimum|MAXimum}
+  FRESistance:NPLCycles? [MINimum|MAXimum]
 [SENSe:]
   ZERO:AUTO {OFF|ONCE|ON}
   ZERO:AUTO?

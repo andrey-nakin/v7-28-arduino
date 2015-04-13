@@ -117,12 +117,11 @@ clean:	clean-objs
 dist:
 	rm -fr /tmp/v7-28-dist
 	mkdir /tmp/v7-28-dist
-	cd doc; pdflatex scpi-commands.tex
-	cp v7-28-arduino.hex /tmp/v7-28-dist/v7-28-arduino.${SCPIMM_VERSION}.hex
-	cp burn.cmd /tmp/v7-28-dist/
-	cp doc/scpi-commands.pdf /tmp/v7-28-dist/scpi-commands.${SCPIMM_VERSION}.pdf
-	m4 --define=SCPIMM_VERSION=$(SCPIMM_VERSION) burn.cmd > /tmp/v7-28-dist/burn.cmd
-	cd /tmp/v7-28-dist/; zip -m -j v7-28-arduino.${SCPIMM_VERSION}.zip *
+	cp v7-28-arduino.hex /tmp/v7-28-dist/v7-28-arduino-${SCPIMM_VERSION}.hex
+	cd doc; pdflatex v7-28-arduino.tex
+	cp doc/v7-28-arduino.pdf /tmp/v7-28-dist/v7-28-arduino-${SCPIMM_VERSION}.pdf
+	m4 --define=SCPIMM_VERSION=$(SCPIMM_VERSION) burn.cmd.m4 > /tmp/v7-28-dist/burn.cmd
+	cd /tmp/v7-28-dist/; zip -m -j v7-28-arduino-${SCPIMM_VERSION}.zip *
 
 ##############################################################################
 # Arduino flash burning targets

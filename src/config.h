@@ -1,8 +1,0 @@
-#ifndef __CONFIG_H_V7_28_ARDUINO
-#define	__CONFIG_H_V7_28_ARDUINO
-
-#define INT_VALUE	0
-#define	BAUD_RATE	9600
-
-#endif	//	__CONFIG_H_V7_28_ARDUINO
-

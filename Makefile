@@ -121,7 +121,7 @@ dist:
 	cd doc; pdflatex v7-28-arduino.tex
 	cp doc/v7-28-arduino.pdf /tmp/v7-28-dist/v7-28-arduino-${SCPIMM_VERSION}.pdf
 	m4 --define=SCPIMM_VERSION=$(SCPIMM_VERSION) burn.cmd.m4 > /tmp/v7-28-dist/burn.cmd
-	cd /tmp/v7-28-dist/; zip -m -j v7-28-arduino-${SCPIMM_VERSION}.zip *
+	cd /tmp/v7-28-dist/; zip -j v7-28-arduino-${SCPIMM_VERSION}.zip *
 
 ##############################################################################
 # Arduino flash burning targets

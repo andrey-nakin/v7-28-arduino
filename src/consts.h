@@ -1,3 +1,20 @@
+/*
+	This file is part of v7-28-arduino project.
+
+	v7-28-arduino is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	v7-28-arduino is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with v7-28-arduino.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #ifndef __CONSTS_H_V7_28_ARDUINO
 #define	__CONSTS_H_V7_28_ARDUINO
 
@@ -79,6 +96,8 @@
 #define	V7_28_AUTO_ZERO TRUE
 #define	V7_28_AUTO_ZERO_ONCE FALSE
 #define V7_28_INPUT_IMPEDANCE_AUTO TRUE
+
+#define	V7_28_DEFAULT_BAUD_RATE	9600
 
 /* non-standard error codes */
 #define V7_28_ERROR_SET_MODE	(SCPI_ERROR_INTERNAL_START + 1)

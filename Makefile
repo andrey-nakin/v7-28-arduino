@@ -118,6 +118,7 @@ dist:
 	rm -fr /tmp/v7-28-dist
 	mkdir /tmp/v7-28-dist
 	cp v7-28-arduino.hex /tmp/v7-28-dist/v7-28-arduino-${SCPIMM_VERSION}.hex
+	m4 --define=SCPIMM_VERSION=$(SCPIMM_VERSION) doc/title.tex.m4 > doc/title.tex
 	cd doc; pdflatex v7-28-arduino.tex
 	cp doc/v7-28-arduino.pdf /tmp/v7-28-dist/v7-28-arduino-${SCPIMM_VERSION}.pdf
 	m4 --define=SCPIMM_VERSION=$(SCPIMM_VERSION) burn.cmd.m4 > /tmp/v7-28-dist/burn.cmd

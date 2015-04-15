@@ -110,15 +110,15 @@ static scpimm_interface_t scpimm_interface = {
 	static v7_28_mode_constants_t func ## _constants = {func ## _ranges, func ## _overruns};
 
 #define MODE_CONSTANTS(mode)	\
-		mode == SCPIMM_MODE_DCV ? &dcv_constants	\
-		: mode == SCPIMM_MODE_ACV ? &acv_constants	\
+		mode == SCPIMM_MODE_DCV || mode == SCPIMM_MODE_DCV_RATIO ? &dcv_constants	\
+		: mode == SCPIMM_MODE_ACV || mode == SCPIMM_MODE_ACV_RATIO ? &acv_constants	\
 		: mode == SCPIMM_MODE_RESISTANCE_4W ? &resistance_constants	\
 		: NULL
 
 #define MODE_PARAMS(mode)	\
-		mode == SCPIMM_MODE_DCV || mode == SCPIMM_MODE_DCV_RATIO ? &v7_28_state.dcv_params	\
-		: mode == SCPIMM_MODE_ACV || mode == SCPIMM_MODE_ACV_RATIO ? &v7_28_state.acv_params	\
-		: mode == SCPIMM_MODE_RESISTANCE_4W ? &v7_28_state.resistance_params	\
+		mode == SCPIMM_MODE_DCV || mode == SCPIMM_MODE_DCV_RATIO ? &v7_28_state.mode_params.dcv	\
+		: mode == SCPIMM_MODE_ACV || mode == SCPIMM_MODE_ACV_RATIO ? &v7_28_state.mode_params.acv	\
+		: mode == SCPIMM_MODE_RESISTANCE_4W ? &v7_28_state.mode_params.resistance	\
 		: NULL
 
 DECL_MODE_CONSTANTS(
@@ -155,7 +155,9 @@ static struct {
 	uint8_t initialized;
 	scpimm_mode_t mode;
 	scpi_bool_t remote;
-	v7_28_mode_params_t dcv_params, acv_params, dcv_ratio_params, acv_ratio_params, resistance_params;
+	struct {
+		v7_28_mode_params_t dcv, acv, resistance;
+	} mode_params;
 } v7_28_state;
 
 /******************************************************************************
@@ -383,7 +385,7 @@ static int16_t set_range(const scpimm_mode_t mode, size_t range_index) {
 		RANGE_CASE(RESISTANCE_4W, resistance);
 
 	default:
-		return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
+		return SCPI_ERROR_UNDEFINED_HEADER;
 	}
 
 	WRITE_4_BITS(PIN_RANGE_, code);
@@ -525,7 +527,7 @@ static int16_t get_allowed_resolutions(scpimm_mode_t mode, size_t range_index, c
 
 		default:
 			// mode is not supported
-			return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
+			return SCPI_ERROR_UNDEFINED_HEADER;
 	}
 
 	if (resolutions) {
@@ -589,7 +591,7 @@ static int16_t get_global_bool_param(const scpimm_bool_param_t param, scpi_bool_
 		break;
 
 	case SCPIMM_PARAM_RANGE_AUTO:
-		return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
+		return SCPI_ERROR_UNDEFINED_HEADER;
 	}
 
 	if (value) {
@@ -614,7 +616,7 @@ static int16_t set_global_bool_param(const scpimm_bool_param_t param, const scpi
 		break;
 
 	case SCPIMM_PARAM_RANGE_AUTO:
-		return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
+		return SCPI_ERROR_UNDEFINED_HEADER;
 	}
 
 	return SCPI_ERROR_OK;
@@ -625,7 +627,7 @@ static int16_t get_bool_param(const scpimm_mode_t mode, const scpimm_bool_param_
 	scpi_bool_t res = FALSE;
 
 	if (!params) {
-		return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
+		return SCPI_ERROR_UNDEFINED_HEADER;
 	}
 
 	switch (param) {
@@ -638,7 +640,7 @@ static int16_t get_bool_param(const scpimm_mode_t mode, const scpimm_bool_param_
 	case SCPIMM_PARAM_INPUT_IMPEDANCE_AUTO:
 	case SCPIMM_PARAM_REMOTE:
 	case SCPIMM_PARAM_LOCK:
-		return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
+		return SCPI_ERROR_UNDEFINED_HEADER;
 	}
 
 	if (value) {
@@ -652,7 +654,7 @@ static int16_t set_bool_param(const scpimm_mode_t mode, const scpimm_bool_param_
 	v7_28_mode_params_t* const params = MODE_PARAMS(mode);
 
 	if (!params) {
-		return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
+		return SCPI_ERROR_UNDEFINED_HEADER;
 	}
 
 	switch (param) {
@@ -668,7 +670,7 @@ static int16_t set_bool_param(const scpimm_mode_t mode, const scpimm_bool_param_
 	case SCPIMM_PARAM_INPUT_IMPEDANCE_AUTO:
 	case SCPIMM_PARAM_REMOTE:
 	case SCPIMM_PARAM_LOCK:
-		return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
+		return SCPI_ERROR_UNDEFINED_HEADER;
 	}
 
 	return SCPI_ERROR_OK;
@@ -679,7 +681,7 @@ static int16_t get_numeric_param_values(scpimm_mode_t mode, scpimm_numeric_param
 	const v7_28_mode_constants_t* const constants = MODE_CONSTANTS(mode);
 
 	if (!constants) {
-		return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
+		return SCPI_ERROR_UNDEFINED_HEADER;
 	}
 
 	switch (param) {
@@ -696,7 +698,7 @@ static int16_t get_numeric_param_values(scpimm_mode_t mode, scpimm_numeric_param
 		break;
 
 	case SCPIMM_PARAM_RESOLUTION:
-		return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
+		return SCPI_ERROR_UNDEFINED_HEADER;
 	}
 
 	if (values) {
@@ -711,7 +713,7 @@ static int16_t get_numeric_param(scpimm_mode_t mode, scpimm_numeric_param_t para
 	size_t res = 0;
 
 	if (!params) {
-		return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
+		return SCPI_ERROR_UNDEFINED_HEADER;
 	}
 
 	switch (param) {
@@ -728,7 +730,7 @@ static int16_t get_numeric_param(scpimm_mode_t mode, scpimm_numeric_param_t para
 		break;
 
 	case SCPIMM_PARAM_RANGE_OVERRUN:
-		return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
+		return SCPI_ERROR_UNDEFINED_HEADER;
 	}
 
 	if (value_index) {
@@ -742,7 +744,7 @@ static int16_t set_numeric_param(const scpimm_mode_t mode, const scpimm_numeric_
 	v7_28_mode_params_t* const params = MODE_PARAMS(mode);
 
 	if (!params) {
-		return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
+		return SCPI_ERROR_UNDEFINED_HEADER;
 	}
 
 	switch (param) {
@@ -759,7 +761,7 @@ static int16_t set_numeric_param(const scpimm_mode_t mode, const scpimm_numeric_
 		break;
 
 	case SCPIMM_PARAM_RANGE_OVERRUN:
-		return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;
+		return SCPI_ERROR_UNDEFINED_HEADER;
 	}
 
 	return SCPI_ERROR_OK;
@@ -771,21 +773,19 @@ static void reset_mode_params(v7_28_mode_params_t* mp) {
 }
 
 static int16_t reset() {
-	reset_mode_params(&v7_28_state.dcv_params);
-	reset_mode_params(&v7_28_state.dcv_ratio_params);
-	reset_mode_params(&v7_28_state.acv_params);
-	reset_mode_params(&v7_28_state.acv_ratio_params);
-	reset_mode_params(&v7_28_state.resistance_params);
+	reset_mode_params(&v7_28_state.mode_params.dcv);
+	reset_mode_params(&v7_28_state.mode_params.acv);
+	reset_mode_params(&v7_28_state.mode_params.resistance);
 
 	set_disabled(TRUE);
 	set_remote(v7_28_state.remote = TRUE);
-	set_auto_range(TRUE);	//  enable autorange
 
-    digitalWrite(PIN_REMOTE, LOW);  //  enable remote mode
     digitalWrite(PIN_AUTOSTART, LOW);   //  disable autostart
     digitalWrite(PIN_START, LOW);
 
 	set_disabled(FALSE);
+
+	(void) set_mode(SCPIMM_MODE_DCV, NULL);
 
 	return SCPI_ERROR_OK;
 }

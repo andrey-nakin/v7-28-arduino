@@ -56,6 +56,9 @@ if { $idn == "" } {
 } 
 puts "IDN = $idn"
 
+# switch to remote mode
+puts $fd "SYST:REM"
+
 # measure DC voltage
 puts $fd "MEAS:VOLT?"
 puts "VOLTAGE = [gets $fd]"

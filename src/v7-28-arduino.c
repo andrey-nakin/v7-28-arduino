@@ -409,13 +409,13 @@ static int16_t setup_voltmeter() {
 	return SCPI_ERROR_OK;
 }
 
-static int16_t set_mode(const scpimm_mode_t mode, const scpimm_mode_params_t* params) {
+static int16_t set_mode(const scpimm_mode_t mode, const scpimm_mode_params_t* const params) {
 	scpi_bool_t change_mode = TRUE;
 	uint8_t mode_code, expected;
 	int n = V7_28_SET_MODE_MAX_STEPS;
 	v7_28_mode_params_t* const mode_params = MODE_PARAMS(mode);
 
-	if (!params) {
+	if (!mode_params) {
 		return SCPI_ERROR_UNDEFINED_HEADER;
 	}
 

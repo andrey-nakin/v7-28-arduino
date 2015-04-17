@@ -121,6 +121,7 @@ dist:
 	m4 --define=SCPIMM_VERSION=$(SCPIMM_VERSION) doc/title.tex.m4 > doc/title.tex
 	cd doc; pdflatex v7-28-arduino.tex
 	cp doc/v7-28-arduino.pdf /tmp/v7-28-dist/v7-28-arduino-${SCPIMM_VERSION}.pdf
+	m4 --define=SCPIMM_VERSION=$(SCPIMM_VERSION) burn.sh.m4 > /tmp/v7-28-dist/burn.sh
 	m4 --define=SCPIMM_VERSION=$(SCPIMM_VERSION) burn.cmd.m4 > /tmp/v7-28-dist/burn.cmd
 	mkdir /tmp/v7-28-dist/demo
 	cp demo/* /tmp/v7-28-dist/demo/

@@ -19,6 +19,7 @@
  */
 
 #include <Arduino.h>
+#include "config.h"
 #include <scpimm/scpimm.h>
 #include "consts.h"
 #include "pins.h"

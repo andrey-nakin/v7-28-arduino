@@ -32,7 +32,7 @@ LIBSCPIMM_SRCS = $(addprefix $(LIBSCPIMM_SRC_DIR)/, scpimm.c configure.c display
 LIBSCPIMM_HEADERS = $(addprefix $(LIBSCPIMM_INCLUDE_DIR)/, scpimm.h)
 LIBSCPIMM_OBJS = $(addprefix $(LIBSCPIMM_OBJ_DIR)/, $(notdir $(LIBSCPIMM_SRCS:.c=.o)))
 
-CFLAGS += -g -Os -Wall -fno-exceptions -ffunction-sections -fdata-sections -mmcu=$(ARDUINO_CHIP) -DF_CPU=16000000L -MMD -DUSB_VID=null -DUSB_PID=null -DARDUINO=$(ARDUINO_DEF) -DSCPIMM_NO_CURRENT_DC -DSCPIMM_NO_CURRENT_AC -DSCPIMM_NO_RESISTANCE -DV7_28_REVISION_NO=\"$(SCPIMM_VERSION)\" -DV7_28_REVISION_DATE=\"$(SCPI_DATE)\"
+CFLAGS += -g -Os -Wall -fno-exceptions -ffunction-sections -fdata-sections -mmcu=$(ARDUINO_CHIP) -DF_CPU=16000000L -MMD -DUSB_VID=null -DUSB_PID=null -DARDUINO=$(ARDUINO_DEF) -DSCPIMM_NO_CURRENT_DC -DSCPIMM_NO_CURRENT_AC -DSCPIMM_NO_RESISTANCE -DV7_28_REVISION_NO=\"$(SCPIMM_VERSION)\" -DV7_28_REVISION_DATE=\"$(SCPI_DATE)\" -DHAVE_DTOSTRE=1
 
 ##############################################################################
 # Basic targets

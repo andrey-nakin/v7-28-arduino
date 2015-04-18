@@ -277,8 +277,6 @@ static void set_disabled(scpi_bool_t disabled) {
 
 // configure in/out pins
 static void setupPins() {
-	Serial.begin(9600);
-  
 	pinMode(PIN_DIGIT1_1, INPUT);
 	pinMode(PIN_DIGIT1_2, INPUT);
 	pinMode(PIN_DIGIT1_4, INPUT);
@@ -370,7 +368,7 @@ static int16_t set_range(const scpimm_mode_t mode, size_t range_index) {
 #define	RANGE_CASE(func, var) \
 	case SCPIMM_MODE_ ## func:	\
 	if (sizeof(var ## _range_codes)/sizeof(var ## _range_codes[0]) <= range_index) {	\
-		return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;	\
+		return SCPIMM_ERROR_ILLEGAL_PARAMETER_VALUE;	\
 	}	\
 	code = var ## _range_codes[range_index];	\
 	break
@@ -385,11 +383,11 @@ static int16_t set_range(const scpimm_mode_t mode, size_t range_index) {
 		RANGE_CASE(RESISTANCE_4W, resistance);
 
 	default:
-		return SCPI_ERROR_UNDEFINED_HEADER;
+		return SCPIMM_ERROR_UNDEFINED_HEADER;
 	}
 
 	WRITE_4_BITS(PIN_RANGE_, code);
-	return SCPI_ERROR_OK;
+	return SCPIMM_ERROR_OK;
 
 #undef	RANGE_CASE
 }
@@ -406,7 +404,7 @@ static int16_t setup_voltmeter() {
 	Serial.begin(V7_28_DEFAULT_BAUD_RATE);
 	setupPins();
 
-	return SCPI_ERROR_OK;
+	return SCPIMM_ERROR_OK;
 }
 
 static int16_t set_mode(const scpimm_mode_t mode, const scpimm_mode_params_t* const params) {
@@ -416,7 +414,7 @@ static int16_t set_mode(const scpimm_mode_t mode, const scpimm_mode_params_t* co
 	v7_28_mode_params_t* const mode_params = MODE_PARAMS(mode);
 
 	if (!mode_params) {
-		return SCPI_ERROR_UNDEFINED_HEADER;
+		return SCPIMM_ERROR_UNDEFINED_HEADER;
 	}
 
 	if (is_mode_initialized()) {
@@ -452,7 +450,7 @@ static int16_t set_mode(const scpimm_mode_t mode, const scpimm_mode_params_t* co
 
 			default:
 				// mode is not supported
-				return SCPI_ERROR_UNDEFINED_HEADER;
+				return SCPIMM_ERROR_UNDEFINED_HEADER;
 		}
 	}
 
@@ -481,37 +479,37 @@ static int16_t set_mode(const scpimm_mode_t mode, const scpimm_mode_params_t* co
 			if (read_mode == expected) {
 				v7_28_state.mode = mode;
 				set_state_initialized(V7_28_STATE_INITIALIZED_MODE);
-				return SCPI_ERROR_OK;
+				return SCPIMM_ERROR_OK;
 			}
 
 			delay(V7_28_SET_MODE_DELAY);
 		}
 
 		// multimeter could not switch to given mode
-		return V7_28_ERROR_SET_MODE;
+		return SCPIMM_ERROR_INTERNAL;
     } else {
     	// no need to wait
-    	return SCPI_ERROR_OK;
+    	return SCPIMM_ERROR_OK;
     }
 }
 
 static int16_t get_mode(scpimm_mode_t* const mode) {
 	if (!is_mode_initialized()) {
-		return V7_28_ERROR_MODE_NOT_INITIALIZED;
+		return SCPIMM_ERROR_INTERNAL;
 	}
 
 	if (mode) {
 		*mode = v7_28_state.mode;
 	}
 
-	return SCPI_ERROR_OK;
+	return SCPIMM_ERROR_OK;
 }
 
 static int16_t get_allowed_resolutions(scpimm_mode_t mode, size_t range_index, const double** resolutions) {
 #define	RANGE_CASE(func, var)	\
 	case SCPIMM_MODE_ ## func:	\
 		if (sizeof(var ## _resolutions) / sizeof(var ## _resolutions[0]) <= range_index) {	\
-			return SCPI_ERROR_ILLEGAL_PARAMETER_VALUE;	\
+			return SCPIMM_ERROR_ILLEGAL_PARAMETER_VALUE;	\
 		}	\
 		resolutions_src = var ## _resolutions[range_index];	\
 		break
@@ -527,14 +525,14 @@ static int16_t get_allowed_resolutions(scpimm_mode_t mode, size_t range_index, c
 
 		default:
 			// mode is not supported
-			return SCPI_ERROR_UNDEFINED_HEADER;
+			return SCPIMM_ERROR_UNDEFINED_HEADER;
 	}
 
 	if (resolutions) {
 		*resolutions = resolutions_src;
 	}
 
-	return SCPI_ERROR_OK;
+	return SCPIMM_ERROR_OK;
 
 #undef	RANGE_CASE
 }
@@ -543,7 +541,7 @@ static int16_t start_measure() {
 	digitalWrite(PIN_START, HIGH);
 	delayMicroseconds(20);
 	digitalWrite(PIN_START, LOW);
-	return SCPI_ERROR_OK;
+	return SCPIMM_ERROR_OK;
 }
 
 static size_t send(const uint8_t* data, const size_t len) {
@@ -554,7 +552,7 @@ static int16_t get_milliseconds(uint32_t* const tm) {
 	if (tm) {
 		*tm = millis();
 	}
-	return SCPI_ERROR_OK;
+	return SCPIMM_ERROR_OK;
 }
 
 static int16_t set_interrupt_status(const scpi_bool_t disabled) {
@@ -563,7 +561,7 @@ static int16_t set_interrupt_status(const scpi_bool_t disabled) {
 	} else {
 		interrupts();
 	}
-	return SCPI_ERROR_OK;
+	return SCPIMM_ERROR_OK;
 }
 
 static int16_t get_global_bool_param(const scpimm_bool_param_t param, scpi_bool_t* value) {
@@ -591,14 +589,14 @@ static int16_t get_global_bool_param(const scpimm_bool_param_t param, scpi_bool_
 		break;
 
 	case SCPIMM_PARAM_RANGE_AUTO:
-		return SCPI_ERROR_UNDEFINED_HEADER;
+		return SCPIMM_ERROR_UNDEFINED_HEADER;
 	}
 
 	if (value) {
 		*value = res;
 	}
 
-	return SCPI_ERROR_OK;
+	return SCPIMM_ERROR_OK;
 }
 
 static int16_t set_global_bool_param(const scpimm_bool_param_t param, const scpi_bool_t value) {
@@ -616,10 +614,10 @@ static int16_t set_global_bool_param(const scpimm_bool_param_t param, const scpi
 		break;
 
 	case SCPIMM_PARAM_RANGE_AUTO:
-		return SCPI_ERROR_UNDEFINED_HEADER;
+		return SCPIMM_ERROR_UNDEFINED_HEADER;
 	}
 
-	return SCPI_ERROR_OK;
+	return SCPIMM_ERROR_OK;
 }
 
 static int16_t get_bool_param(const scpimm_mode_t mode, const scpimm_bool_param_t param, scpi_bool_t* const value) {
@@ -627,7 +625,7 @@ static int16_t get_bool_param(const scpimm_mode_t mode, const scpimm_bool_param_
 	scpi_bool_t res = FALSE;
 
 	if (!params) {
-		return SCPI_ERROR_UNDEFINED_HEADER;
+		return SCPIMM_ERROR_UNDEFINED_HEADER;
 	}
 
 	switch (param) {
@@ -640,21 +638,21 @@ static int16_t get_bool_param(const scpimm_mode_t mode, const scpimm_bool_param_
 	case SCPIMM_PARAM_INPUT_IMPEDANCE_AUTO:
 	case SCPIMM_PARAM_REMOTE:
 	case SCPIMM_PARAM_LOCK:
-		return SCPI_ERROR_UNDEFINED_HEADER;
+		return SCPIMM_ERROR_UNDEFINED_HEADER;
 	}
 
 	if (value) {
 		*value = res;
 	}
 
-	return SCPI_ERROR_OK;
+	return SCPIMM_ERROR_OK;
 }
 
 static int16_t set_bool_param(const scpimm_mode_t mode, const scpimm_bool_param_t param, const scpi_bool_t value) {
 	v7_28_mode_params_t* const params = MODE_PARAMS(mode);
 
 	if (!params) {
-		return SCPI_ERROR_UNDEFINED_HEADER;
+		return SCPIMM_ERROR_UNDEFINED_HEADER;
 	}
 
 	switch (param) {
@@ -670,10 +668,10 @@ static int16_t set_bool_param(const scpimm_mode_t mode, const scpimm_bool_param_
 	case SCPIMM_PARAM_INPUT_IMPEDANCE_AUTO:
 	case SCPIMM_PARAM_REMOTE:
 	case SCPIMM_PARAM_LOCK:
-		return SCPI_ERROR_UNDEFINED_HEADER;
+		return SCPIMM_ERROR_UNDEFINED_HEADER;
 	}
 
-	return SCPI_ERROR_OK;
+	return SCPIMM_ERROR_OK;
 }
 
 static int16_t get_numeric_param_values(scpimm_mode_t mode, scpimm_numeric_param_t param, const double** values) {
@@ -681,7 +679,7 @@ static int16_t get_numeric_param_values(scpimm_mode_t mode, scpimm_numeric_param
 	const v7_28_mode_constants_t* const constants = MODE_CONSTANTS(mode);
 
 	if (!constants) {
-		return SCPI_ERROR_UNDEFINED_HEADER;
+		return SCPIMM_ERROR_UNDEFINED_HEADER;
 	}
 
 	switch (param) {
@@ -698,14 +696,14 @@ static int16_t get_numeric_param_values(scpimm_mode_t mode, scpimm_numeric_param
 		break;
 
 	case SCPIMM_PARAM_RESOLUTION:
-		return SCPI_ERROR_UNDEFINED_HEADER;
+		return SCPIMM_ERROR_UNDEFINED_HEADER;
 	}
 
 	if (values) {
 		*values = v;
 	}
 
-	return SCPI_ERROR_OK;
+	return SCPIMM_ERROR_OK;
 }
 
 static int16_t get_numeric_param(scpimm_mode_t mode, scpimm_numeric_param_t param, size_t* value_index) {
@@ -713,7 +711,7 @@ static int16_t get_numeric_param(scpimm_mode_t mode, scpimm_numeric_param_t para
 	size_t res = 0;
 
 	if (!params) {
-		return SCPI_ERROR_UNDEFINED_HEADER;
+		return SCPIMM_ERROR_UNDEFINED_HEADER;
 	}
 
 	switch (param) {
@@ -730,21 +728,21 @@ static int16_t get_numeric_param(scpimm_mode_t mode, scpimm_numeric_param_t para
 		break;
 
 	case SCPIMM_PARAM_RANGE_OVERRUN:
-		return SCPI_ERROR_UNDEFINED_HEADER;
+		return SCPIMM_ERROR_UNDEFINED_HEADER;
 	}
 
 	if (value_index) {
 		*value_index = res;	//	same value for all modes
 	}
 
-	return SCPI_ERROR_OK;
+	return SCPIMM_ERROR_OK;
 }
 
 static int16_t set_numeric_param(const scpimm_mode_t mode, const scpimm_numeric_param_t param, const size_t value_index) {
 	v7_28_mode_params_t* const params = MODE_PARAMS(mode);
 
 	if (!params) {
-		return SCPI_ERROR_UNDEFINED_HEADER;
+		return SCPIMM_ERROR_UNDEFINED_HEADER;
 	}
 
 	switch (param) {
@@ -761,10 +759,10 @@ static int16_t set_numeric_param(const scpimm_mode_t mode, const scpimm_numeric_
 		break;
 
 	case SCPIMM_PARAM_RANGE_OVERRUN:
-		return SCPI_ERROR_UNDEFINED_HEADER;
+		return SCPIMM_ERROR_UNDEFINED_HEADER;
 	}
 
-	return SCPI_ERROR_OK;
+	return SCPIMM_ERROR_OK;
 }
 
 static void reset_mode_params(v7_28_mode_params_t* mp) {
@@ -787,12 +785,12 @@ static int16_t reset() {
 
 	(void) set_mode(SCPIMM_MODE_DCV, NULL);
 
-	return SCPI_ERROR_OK;
+	return SCPIMM_ERROR_OK;
 }
 
 static int16_t beep() {
 	tone(PIN_BEEP, 500, 500);	//	500 Hz 500 ms
-	return SCPI_ERROR_OK;
+	return SCPIMM_ERROR_OK;
 }
 
 static const char* get_idn() {
@@ -806,7 +804,7 @@ static int16_t test() {
 
 	for (i = 0; i < sizeof(modes) / sizeof(modes[0]); i++) {
 		const int16_t err = set_mode(modes[i], NULL);
-		if (SCPI_ERROR_OK != err) {
+		if (SCPIMM_ERROR_OK != err) {
 			return err;
 		}
 		delay(500);

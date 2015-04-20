@@ -36,25 +36,25 @@
   Forward declarations
 ******************************************************************************/
 
-static int16_t setup_voltmeter();
-static int16_t set_mode(const scpimm_mode_t mode, const scpimm_mode_params_t* params);
-static int16_t get_mode(scpimm_mode_t* mode);
-static int16_t get_allowed_resolutions(scpimm_mode_t mode, size_t range_index, const double** resolutions);
-static int16_t start_measure();
+static scpimm_error_t setup_voltmeter();
+static scpimm_error_t set_mode(const scpimm_mode_t mode, const scpimm_mode_params_t* params);
+static scpimm_error_t get_mode(scpimm_mode_t* mode);
+static scpimm_error_t get_allowed_resolutions(scpimm_mode_t mode, size_t range_index, const double** resolutions);
+static scpimm_error_t start_measure();
 static size_t send(const uint8_t* data, size_t len);
-static int16_t get_milliseconds(uint32_t* tm);
-static int16_t set_interrupt_status(scpi_bool_t disabled);
-static int16_t get_global_bool_param(const scpimm_bool_param_t param, scpi_bool_t* value);
-static int16_t set_global_bool_param(const scpimm_bool_param_t param, const scpi_bool_t value);
-static int16_t get_bool_param(scpimm_mode_t mode, const scpimm_bool_param_t param, scpi_bool_t* value);
-static int16_t set_bool_param(scpimm_mode_t mode, const scpimm_bool_param_t param, const scpi_bool_t value);
-static int16_t get_numeric_param_values(scpimm_mode_t mode, scpimm_numeric_param_t param, const double** values);
-static int16_t get_numeric_param(scpimm_mode_t mode, scpimm_numeric_param_t param, size_t* value_index);
-static int16_t set_numeric_param(scpimm_mode_t mode, scpimm_numeric_param_t param, size_t value_index);
-static int16_t reset();
-static int16_t beep();
+static scpimm_error_t get_milliseconds(uint32_t* tm);
+static scpimm_error_t set_interrupt_status(scpi_bool_t disabled);
+static scpimm_error_t get_global_bool_param(const scpimm_bool_param_t param, scpi_bool_t* value);
+static scpimm_error_t set_global_bool_param(const scpimm_bool_param_t param, const scpi_bool_t value);
+static scpimm_error_t get_bool_param(scpimm_mode_t mode, const scpimm_bool_param_t param, scpi_bool_t* value);
+static scpimm_error_t set_bool_param(scpimm_mode_t mode, const scpimm_bool_param_t param, const scpi_bool_t value);
+static scpimm_error_t get_numeric_param_values(scpimm_mode_t mode, scpimm_numeric_param_t param, const double** values);
+static scpimm_error_t get_numeric_param(scpimm_mode_t mode, scpimm_numeric_param_t param, size_t* value_index);
+static scpimm_error_t set_numeric_param(scpimm_mode_t mode, scpimm_numeric_param_t param, size_t value_index);
+static scpimm_error_t reset();
+static scpimm_error_t beep();
 static const char* get_idn();
-static int16_t test();
+static scpimm_error_t test();
 
 /******************************************************************************
   Defitions
@@ -365,7 +365,7 @@ static scpi_bool_t is_mode_initialized(void) {
 }
 
 // setup range pins
-static int16_t set_range(const scpimm_mode_t mode, size_t range_index) {
+static scpimm_error_t set_range(const scpimm_mode_t mode, size_t range_index) {
 #define	RANGE_CASE(func, var) \
 	case SCPIMM_MODE_ ## func:	\
 	if (sizeof(var ## _range_codes)/sizeof(var ## _range_codes[0]) <= range_index) {	\
@@ -401,14 +401,14 @@ static void set_remote(scpi_bool_t remote) {
   Multimeter interface implementation
 ******************************************************************************/
 
-static int16_t setup_voltmeter() {
+static scpimm_error_t setup_voltmeter() {
 	Serial.begin(V7_28_DEFAULT_BAUD_RATE);
 	setupPins();
 
 	return SCPIMM_ERROR_OK;
 }
 
-static int16_t set_mode(const scpimm_mode_t mode, const scpimm_mode_params_t* const params) {
+static scpimm_error_t set_mode(const scpimm_mode_t mode, const scpimm_mode_params_t* const params) {
 	scpi_bool_t change_mode = TRUE;
 	uint8_t mode_code, expected;
 	int n = V7_28_SET_MODE_MAX_STEPS;
@@ -494,7 +494,7 @@ static int16_t set_mode(const scpimm_mode_t mode, const scpimm_mode_params_t* co
     }
 }
 
-static int16_t get_mode(scpimm_mode_t* const mode) {
+static scpimm_error_t get_mode(scpimm_mode_t* const mode) {
 	if (!is_mode_initialized()) {
 		return SCPIMM_ERROR_INTERNAL;
 	}
@@ -506,7 +506,7 @@ static int16_t get_mode(scpimm_mode_t* const mode) {
 	return SCPIMM_ERROR_OK;
 }
 
-static int16_t get_allowed_resolutions(scpimm_mode_t mode, size_t range_index, const double** resolutions) {
+static scpimm_error_t get_allowed_resolutions(scpimm_mode_t mode, size_t range_index, const double** resolutions) {
 #define	RANGE_CASE(func, var)	\
 	case SCPIMM_MODE_ ## func:	\
 		if (sizeof(var ## _resolutions) / sizeof(var ## _resolutions[0]) <= range_index) {	\
@@ -538,7 +538,7 @@ static int16_t get_allowed_resolutions(scpimm_mode_t mode, size_t range_index, c
 #undef	RANGE_CASE
 }
 
-static int16_t start_measure() {
+static scpimm_error_t start_measure() {
 	digitalWrite(PIN_START, HIGH);
 	delayMicroseconds(20);
 	digitalWrite(PIN_START, LOW);
@@ -549,14 +549,14 @@ static size_t send(const uint8_t* data, const size_t len) {
 	return Serial.write(data, len);
 }
 
-static int16_t get_milliseconds(uint32_t* const tm) {
+static scpimm_error_t get_milliseconds(uint32_t* const tm) {
 	if (tm) {
 		*tm = millis();
 	}
 	return SCPIMM_ERROR_OK;
 }
 
-static int16_t set_interrupt_status(const scpi_bool_t disabled) {
+static scpimm_error_t set_interrupt_status(const scpi_bool_t disabled) {
 	if (disabled) {
 		noInterrupts();
 	} else {
@@ -565,7 +565,7 @@ static int16_t set_interrupt_status(const scpi_bool_t disabled) {
 	return SCPIMM_ERROR_OK;
 }
 
-static int16_t get_global_bool_param(const scpimm_bool_param_t param, scpi_bool_t* value) {
+static scpimm_error_t get_global_bool_param(const scpimm_bool_param_t param, scpi_bool_t* value) {
 	scpi_bool_t res = FALSE;
 
 	switch (param) {
@@ -600,7 +600,7 @@ static int16_t get_global_bool_param(const scpimm_bool_param_t param, scpi_bool_
 	return SCPIMM_ERROR_OK;
 }
 
-static int16_t set_global_bool_param(const scpimm_bool_param_t param, const scpi_bool_t value) {
+static scpimm_error_t set_global_bool_param(const scpimm_bool_param_t param, const scpi_bool_t value) {
 	switch (param) {
 	case SCPIMM_PARAM_REMOTE:
 		set_remote(v7_28_state.remote = value);
@@ -621,7 +621,7 @@ static int16_t set_global_bool_param(const scpimm_bool_param_t param, const scpi
 	return SCPIMM_ERROR_OK;
 }
 
-static int16_t get_bool_param(const scpimm_mode_t mode, const scpimm_bool_param_t param, scpi_bool_t* const value) {
+static scpimm_error_t get_bool_param(const scpimm_mode_t mode, const scpimm_bool_param_t param, scpi_bool_t* const value) {
 	const v7_28_mode_params_t* const params = MODE_PARAMS(mode);
 	scpi_bool_t res = FALSE;
 
@@ -649,7 +649,7 @@ static int16_t get_bool_param(const scpimm_mode_t mode, const scpimm_bool_param_
 	return SCPIMM_ERROR_OK;
 }
 
-static int16_t set_bool_param(const scpimm_mode_t mode, const scpimm_bool_param_t param, const scpi_bool_t value) {
+static scpimm_error_t set_bool_param(const scpimm_mode_t mode, const scpimm_bool_param_t param, const scpi_bool_t value) {
 	v7_28_mode_params_t* const params = MODE_PARAMS(mode);
 
 	if (!params) {
@@ -675,7 +675,7 @@ static int16_t set_bool_param(const scpimm_mode_t mode, const scpimm_bool_param_
 	return SCPIMM_ERROR_OK;
 }
 
-static int16_t get_numeric_param_values(scpimm_mode_t mode, scpimm_numeric_param_t param, const double** values) {
+static scpimm_error_t get_numeric_param_values(scpimm_mode_t mode, scpimm_numeric_param_t param, const double** values) {
 	const double* v = NULL;
 	const v7_28_mode_constants_t* const constants = MODE_CONSTANTS(mode);
 
@@ -707,7 +707,7 @@ static int16_t get_numeric_param_values(scpimm_mode_t mode, scpimm_numeric_param
 	return SCPIMM_ERROR_OK;
 }
 
-static int16_t get_numeric_param(scpimm_mode_t mode, scpimm_numeric_param_t param, size_t* value_index) {
+static scpimm_error_t get_numeric_param(scpimm_mode_t mode, scpimm_numeric_param_t param, size_t* value_index) {
 	const v7_28_mode_params_t* const params = MODE_PARAMS(mode);
 	size_t res = 0;
 
@@ -739,7 +739,7 @@ static int16_t get_numeric_param(scpimm_mode_t mode, scpimm_numeric_param_t para
 	return SCPIMM_ERROR_OK;
 }
 
-static int16_t set_numeric_param(const scpimm_mode_t mode, const scpimm_numeric_param_t param, const size_t value_index) {
+static scpimm_error_t set_numeric_param(const scpimm_mode_t mode, const scpimm_numeric_param_t param, const size_t value_index) {
 	v7_28_mode_params_t* const params = MODE_PARAMS(mode);
 
 	if (!params) {
@@ -771,7 +771,7 @@ static void reset_mode_params(v7_28_mode_params_t* mp) {
 	mp->auto_range = TRUE;
 }
 
-static int16_t reset() {
+static scpimm_error_t reset() {
 	reset_mode_params(&v7_28_state.mode_params.dcv);
 	reset_mode_params(&v7_28_state.mode_params.acv);
 	reset_mode_params(&v7_28_state.mode_params.resistance);
@@ -789,7 +789,7 @@ static int16_t reset() {
 	return SCPIMM_ERROR_OK;
 }
 
-static int16_t beep() {
+static scpimm_error_t beep() {
 	tone(PIN_BEEP, 500, 500);	//	500 Hz 500 ms
 	return SCPIMM_ERROR_OK;
 }
@@ -798,13 +798,13 @@ static const char* get_idn() {
 	return V7_28_IDN;
 }
 
-static int16_t test() {
+static scpimm_error_t test() {
 	const scpimm_mode_t saved_mode = v7_28_state.mode;
 	static const scpimm_mode_t modes[] = {SCPIMM_MODE_DCV, SCPIMM_MODE_DCV_RATIO, SCPIMM_MODE_ACV, SCPIMM_MODE_ACV_RATIO, SCPIMM_MODE_RESISTANCE_4W};
 	size_t i;
 
 	for (i = 0; i < sizeof(modes) / sizeof(modes[0]); i++) {
-		const int16_t err = set_mode(modes[i], NULL);
+		const scpimm_error_t err = set_mode(modes[i], NULL);
 		if (SCPIMM_ERROR_OK != err) {
 			return err;
 		}

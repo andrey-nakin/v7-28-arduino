@@ -5,7 +5,7 @@
 # Serial port the Arduino works on. Used when burning HEX code to Arduino's flash memory
 SERIAL = /dev/ttyACM0
 
-SCPIMM_VERSION=1.0.0
+SCPIMM_VERSION=1.0.1
 SCPI_DATE=$(shell date +%F)
 
 ARDUINO_DEF = 105

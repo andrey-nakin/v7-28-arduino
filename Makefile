@@ -114,7 +114,11 @@ clean-objs:
 clean:	clean-objs
 	rm -f *.eep *.hex
 
-dist:
+manual:
+	m4 --define=SCPIMM_VERSION=$(SCPIMM_VERSION) doc/title.tex.m4 > doc/title.tex
+	cd doc; pdflatex v7-28-arduino.tex
+
+dist:	manual
 	rm -fr /tmp/v7-28-dist
 	mkdir /tmp/v7-28-dist
 	cp v7-28-arduino.hex /tmp/v7-28-dist/v7-28-arduino-${SCPIMM_VERSION}.hex
